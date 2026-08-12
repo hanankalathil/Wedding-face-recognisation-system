@@ -2,7 +2,7 @@ import uvicorn
 import os
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 8080))
     # Change to the directory containing run.py (the backend directory)
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     is_dev = os.environ.get("DEV", "false").lower() == "true"
