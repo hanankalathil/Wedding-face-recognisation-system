@@ -27,8 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if os.path.exists(GALLERY_DIR):
-    app.mount("/gallery", StaticFiles(directory=GALLERY_DIR), name="gallery")
+# Ensure the gallery directory exists on startup so it can be mounted reliably
+os.makedirs(GALLERY_DIR, exist_ok=True)
+app.mount("/gallery", StaticFiles(directory=GALLERY_DIR), name="gallery")
 
 load_db()
 

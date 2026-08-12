@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: wedding-face-recognition-system
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/run.py
+    envVars:
+      - key: PYTHONPATH
+        value: backend
+      - key: DATA_DIR
+        value: /opt/render/project/src/backend/data
+      - key: DEV
+        value: false
+    disk:
+      name: face-recognition-data
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1
