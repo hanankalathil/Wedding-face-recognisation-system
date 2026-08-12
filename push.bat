@@ -20,7 +20,7 @@ if not exist .git (
 git remote get-url origin >nul 2>&1
 if errorlevel 1 (
     echo [INFO] Adding remote origin...
-    git remote add origin https://github.com/testingemail2022w-bit/Wedding-face-recognisation-system.git
+    git remote add origin https://github.com/hanankalathil/Wedding-face-recognisation-system.git
     if errorlevel 1 (
         echo [ERROR] Failed to add remote origin.
         pause
@@ -28,7 +28,7 @@ if errorlevel 1 (
     )
 ) else (
     echo [INFO] Updating remote origin URL...
-    git remote set-url origin https://github.com/testingemail2022w-bit/Wedding-face-recognisation-system.git
+    git remote set-url origin https://github.com/hanankalathil/Wedding-face-recognisation-system.git
 )
 
 :: Prompt user for custom commit message

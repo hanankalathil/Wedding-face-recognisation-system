@@ -1,0 +1,8 @@
+INFO:     Started server process [24156]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[I 2026-08-12 19:29:10] concurrency model: async
+[I 2026-08-12 19:29:10] masquerade (NAT) address: None
+[I 2026-08-12 19:29:10] passive ports: None
+[I 2026-08-12 19:29:10] >>> starting FTP server on 0.0.0.0:2121, pid=24156 <<<
