@@ -430,6 +430,94 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clearFilesBtn.addEventListener('click', clearFiles);
 
+    // Helper functions for dynamic Upload Progress Loading Screen
+    function showUploadLoader(totalFiles) {
+        let overlay = document.getElementById('upload-loader-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'upload-loader-overlay';
+            overlay.className = 'upload-loader-overlay';
+            overlay.innerHTML = `
+                <div class="upload-loader-card">
+                    <div class="loader-spinner-container">
+                        <div class="loader-spinner-ring"></div>
+                        <div class="loader-spinner-ring-inner"></div>
+                    </div>
+                    <div class="loader-text-title" id="loader-text-title">Uploading Photos</div>
+                    <div class="loader-text-status" id="loader-text-status">Preparing files...</div>
+                    <div class="loader-progress-container">
+                        <div class="loader-progress-bar" id="loader-progress-bar"></div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
+        document.getElementById('loader-text-title').innerText = 'Uploading Photos';
+        document.getElementById('loader-text-status').innerText = `Starting upload of ${totalFiles} files...`;
+        document.getElementById('loader-progress-bar').style.width = '0%';
+        
+        // Force reflow
+        overlay.offsetHeight;
+        overlay.classList.add('active');
+    }
+
+    function updateUploadLoader(currentFileIndex, totalFiles, currentFilePercent = 0) {
+        const overallPercent = Math.round(((currentFileIndex + (currentFilePercent / 100)) / totalFiles) * 100);
+        const titleElement = document.getElementById('loader-text-title');
+        const statusElement = document.getElementById('loader-text-status');
+        const progressElement = document.getElementById('loader-progress-bar');
+        
+        if (titleElement) titleElement.innerText = `Uploading (${overallPercent}%)`;
+        if (statusElement) {
+            statusElement.innerText = `Uploading file ${currentFileIndex + 1} of ${totalFiles}... (${Math.round(currentFilePercent)}%)`;
+        }
+        if (progressElement) progressElement.style.width = `${overallPercent}%`;
+    }
+
+    function hideUploadLoader() {
+        const overlay = document.getElementById('upload-loader-overlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+    }
+
+    function uploadFileWithProgress(file, category, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            const url = category ? `/api/admin/couple-photos/upload` : `/api/admin/upload`;
+            
+            xhr.open('POST', url, true);
+            
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    onProgress(percentComplete);
+                }
+            };
+            
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve(true);
+                } else {
+                    reject(new Error(`Server returned status ${xhr.status}`));
+                }
+            };
+            
+            xhr.onerror = function() {
+                reject(new Error('Network error'));
+            };
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            if (category) {
+                formData.append('category', category);
+            }
+            
+            xhr.send(formData);
+        });
+    }
+
     // Real upload process
     startUploadBtn.addEventListener('click', async () => {
         if (selectedFiles.length === 0) return;
@@ -439,29 +527,25 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelUploadBtn.disabled = true;
         clearFilesBtn.disabled = true;
 
+        showUploadLoader(selectedFiles.length);
+
         let successCount = 0;
         let failCount = 0;
 
-        for (const file of selectedFiles) {
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
             try {
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                const response = await fetch(`/api/admin/upload`, {
-                    method: 'POST',
-                    body: formData
+                await uploadFileWithProgress(file, null, (percent) => {
+                    updateUploadLoader(i, selectedFiles.length, percent);
                 });
-                
-                if (response.ok) {
-                    successCount++;
-                } else {
-                    failCount++;
-                }
+                successCount++;
             } catch (error) {
                 failCount++;
+                updateUploadLoader(i, selectedFiles.length, 100);
             }
         }
 
+        hideUploadLoader();
         showCustomAlert(`Upload complete! Success: ${successCount}, Failed: ${failCount}`);
         closeModal();
         startUploadBtn.innerHTML = 'Start Upload';
@@ -1364,31 +1448,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cancelCoupleUploadBtn) cancelCoupleUploadBtn.disabled = true;
             if (clearCoupleFilesBtn) clearCoupleFilesBtn.disabled = true;
 
+            showUploadLoader(selectedCoupleFiles.length);
+
             let successCount = 0;
             let failCount = 0;
             const category = coupleCategorySelect ? coupleCategorySelect.value : 'ceremony';
 
-            for (const file of selectedCoupleFiles) {
+            for (let i = 0; i < selectedCoupleFiles.length; i++) {
+                const file = selectedCoupleFiles[i];
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('category', category);
-                    
-                    const response = await fetch(`/api/admin/couple-photos/upload`, {
-                        method: 'POST',
-                        body: formData
+                    await uploadFileWithProgress(file, category, (percent) => {
+                        updateUploadLoader(i, selectedCoupleFiles.length, percent);
                     });
-                    
-                    if (response.ok) {
-                        successCount++;
-                    } else {
-                       failCount++;
-                    }
+                    successCount++;
                 } catch (error) {
                     failCount++;
+                    updateUploadLoader(i, selectedCoupleFiles.length, 100);
                 }
             }
 
+            hideUploadLoader();
             showCustomAlert(`Upload complete! Success: ${successCount}, Failed: ${failCount}`);
             closeCoupleModal();
             startCoupleUploadBtn.innerHTML = 'Start Upload';

@@ -1041,4 +1041,115 @@ body {
     border-color: #ef4444;
 }
 
+/* Premium Upload Progress Loading Overlay */
+.upload-loader-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(4, 6, 12, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.upload-loader-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.upload-loader-card {
+    background: rgba(16, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 40px;
+    width: 90%;
+    max-width: 450px;
+    text-align: center;
+    box-shadow: var(--glass-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.upload-loader-overlay.active .upload-loader-card {
+    transform: scale(1);
+}
+
+.loader-spinner-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+.loader-spinner-ring {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border: 6px solid transparent;
+    border-radius: 50%;
+    animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-top-color: var(--secondary);
+}
+
+.loader-spinner-ring-inner {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    margin: 10px;
+    border: 4px solid transparent;
+    border-radius: 50%;
+    animation: loader-spin-reverse 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-top-color: var(--accent);
+}
+
+@keyframes loader-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes loader-spin-reverse {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+.loader-text-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.loader-text-status {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.loader-progress-container {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.loader-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--secondary), var(--accent));
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s ease-out;
+}
+
 

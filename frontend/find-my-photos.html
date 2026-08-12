@@ -95,9 +95,14 @@
             <div class="text-center">
                 <h2 class="section-title">Your Memories</h2>
                 <p class="section-subtitle" style="margin-bottom: 1.5rem;">We found these beautiful moments matching your profile.</p>
-                <button type="button" class="btn btn-secondary" id="searchAgainBtn" style="margin-bottom: 3rem; display: inline-flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-arrow-left"></i> Search Another Selfie
-                </button>
+                <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 3rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" id="searchAgainBtn" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-arrow-left"></i> Search Another Selfie
+                    </button>
+                    <button type="button" class="btn btn-primary" id="downloadAllBtn" style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #C5A880 0%, #A3845B 100%); color: #0d1726; border: none; font-weight: 700; box-shadow: 0 4px 20px rgba(197, 168, 128, 0.25);">
+                        <i class="fa-solid fa-file-zipper"></i> Download All (.ZIP)
+                    </button>
+                </div>
             </div>
 
             <!-- Empty State -->
@@ -118,6 +123,10 @@
     <div class="camera-modal" id="cameraModal">
         <div class="camera-container" id="cameraContainer">
             <video id="cameraFeed" autoplay playsinline></video>
+            <div class="camera-overlay">
+                <div class="camera-cutout-ring" id="cameraCutoutRing"></div>
+                <div class="camera-status-msg" id="cameraStatusMsg">Align your face inside the circle</div>
+            </div>
             <div class="camera-controls">
                 <button type="button" class="btn btn-secondary" id="cancelCameraBtn">Cancel</button>
                 <button type="button" class="btn btn-primary" id="captureBtn">Capture</button>

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.db_service import load_db, get_db
-from app.services.face_service import recognize_faces
+from app.services.face_service import recognize_faces, extract_embedding
 
 router = APIRouter()
 
@@ -64,3 +64,24 @@ async def recognize_face(file: UploadFile = File(...)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/detect-face")
+async def detect_face(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return {"has_face": False}
+
+        h, w = img.shape[:2]
+        max_size = 320
+        if max(h, w) > max_size:
+            scale = max_size / max(h, w)
+            img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+        embeddings = extract_embedding(img)
+        return {"has_face": len(embeddings) > 0}
+    except Exception:
+        return {"has_face": False}

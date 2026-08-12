@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let stream = null;
     let selectedFile = null;
+    let currentMatches = [];
 
     // Drag and Drop Handlers
     uploadArea.addEventListener('dragover', (e) => {
@@ -60,6 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let detectionInterval = null;
+    let isDetecting = false;
+
     // Camera Handlers
     cameraBtn.addEventListener('click', async (e) => {
         e.stopPropagation(); // Prevent triggering file input click
@@ -68,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cameraFeed.srcObject = stream;
             cameraModal.classList.add('active');
             document.body.classList.add('modal-open');
+            startRealtimeFaceDetection();
         } catch (err) {
             console.error('Error accessing camera:', err);
             showToast('Could not access camera. Please check permissions.', 'error');
@@ -92,12 +97,102 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function stopCamera() {
+        stopRealtimeFaceDetection();
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
             stream = null;
         }
         cameraModal.classList.remove('active');
         document.body.classList.remove('modal-open');
+    }
+
+    function startRealtimeFaceDetection() {
+        const cameraCutoutRing = document.getElementById('cameraCutoutRing');
+        const cameraStatusMsg = document.getElementById('cameraStatusMsg');
+        
+        // Reset classes
+        if (cameraCutoutRing) {
+            cameraCutoutRing.className = 'camera-cutout-ring';
+        }
+        if (cameraStatusMsg) {
+            cameraStatusMsg.className = 'camera-status-msg';
+            cameraStatusMsg.innerText = 'Align your face inside the circle';
+        }
+        
+        // Check face every 800ms
+        detectionInterval = setInterval(async () => {
+            if (isDetecting || !stream) return;
+            
+            const videoW = cameraFeed.videoWidth;
+            const videoH = cameraFeed.videoHeight;
+            if (videoW === 0 || videoH === 0) return;
+            
+            isDetecting = true;
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 200;
+            tempCanvas.height = 200;
+            const ctx = tempCanvas.getContext('2d');
+            
+            const size = Math.min(videoW, videoH) * 0.5;
+            const sx = (videoW - size) / 2;
+            const sy = (videoH - size) * 0.45;
+            
+            ctx.drawImage(cameraFeed, sx, sy, size, size, 0, 0, 200, 200);
+            
+            tempCanvas.toBlob(async (blob) => {
+                if (!blob) {
+                    isDetecting = false;
+                    return;
+                }
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'detect.jpg');
+                    
+                    const response = await fetch('/api/recognize/detect-face', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        const res = await response.json();
+                        
+                        if (stream) {
+                            if (res.has_face) {
+                                if (cameraCutoutRing) {
+                                    cameraCutoutRing.className = 'camera-cutout-ring face-detected';
+                                }
+                                if (cameraStatusMsg) {
+                                    cameraStatusMsg.className = 'camera-status-msg detected';
+                                    cameraStatusMsg.innerText = 'Face Aligned - Ready!';
+                                }
+                            } else {
+                                if (cameraCutoutRing) {
+                                    cameraCutoutRing.className = 'camera-cutout-ring no-face';
+                                }
+                                if (cameraStatusMsg) {
+                                    cameraStatusMsg.className = 'camera-status-msg not-detected';
+                                    cameraStatusMsg.innerText = 'No face detected in circle';
+                                }
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error('Real-time face detection error:', err);
+                } finally {
+                    isDetecting = false;
+                }
+            }, 'image/jpeg', 0.5);
+        }, 800);
+    }
+    
+    function stopRealtimeFaceDetection() {
+        if (detectionInterval) {
+            clearInterval(detectionInterval);
+            detectionInterval = null;
+        }
+        isDetecting = false;
     }
 
     // File Handling
@@ -144,6 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchAPI('/recognize', { method: 'POST', body: formData });
             
             hideLoadingState();
+
+            // Check if no face was detected in the photo
+            if (data.message && data.message.toLowerCase().includes("no faces detected")) {
+                showToast("Face is not clear. Please align your face inside the circle and ensure good lighting.", "error");
+                return;
+            }
             
             if (data.matches && data.matches.length > 0) {
                 // Compatibility with potential different backend responses
@@ -181,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Results Rendering
     function renderResults(matches) {
+        currentMatches = matches.map(m => m.image_url || m);
         const uploadSection = document.querySelector('.upload-section');
         if (uploadSection) {
             uploadSection.style.display = 'none';
@@ -197,13 +299,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const confText = match.confidence !== 'N/A' ? `${Math.round(match.confidence)}% Match` : '';
 
             const card = document.createElement('div');
-            card.className = 'result-card fade-in';
+            card.className = 'result-card fade-in loading';
             card.style.animationDelay = `${index * 0.1}s`;
 
             card.innerHTML = `
-                ${confText ? `<div class="confidence-badge">${confText}</div>` : ''}
-                <img src="${imgUrl}" alt="Wedding Photo" class="result-img" loading="lazy">
-                <div class="result-overlay">
+                ${confText ? `<div class="confidence-badge" style="opacity: 0; transition: opacity 0.3s ease;">${confText}</div>` : ''}
+                <img src="${imgUrl}" alt="Wedding Photo" class="result-img" loading="lazy" style="opacity: 0;">
+                <div class="result-overlay" style="display: none;">
                     <div style="display: flex; gap: 15px;">
                         <button class="action-btn view-btn" title="View Fullscreen"><i class="fa-solid fa-expand"></i></button>
                         <button class="action-btn download-btn" title="Download"><i class="fa-solid fa-download"></i></button>
@@ -212,8 +314,29 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             // Attach Events
+            const img = card.querySelector('.result-img');
             const viewBtn = card.querySelector('.view-btn');
             const downloadBtn = card.querySelector('.download-btn');
+            const confBadge = card.querySelector('.confidence-badge');
+            const overlay = card.querySelector('.result-overlay');
+
+            const handleImageLoad = () => {
+                card.classList.remove('loading');
+                img.style.opacity = '1';
+                if (confBadge) confBadge.style.opacity = '1';
+                if (overlay) overlay.removeAttribute('style');
+            };
+
+            if (img.complete) {
+                handleImageLoad();
+            } else {
+                img.addEventListener('load', handleImageLoad);
+                img.addEventListener('error', () => {
+                    card.classList.remove('loading');
+                    img.src = 'img/placeholder.jpg';
+                    img.style.opacity = '0.5';
+                });
+            }
 
             viewBtn.addEventListener('click', () => openModal(imgUrl));
             downloadBtn.addEventListener('click', () => downloadImage(imgUrl));
@@ -266,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const urlObj = new URL(url, window.location.origin);
             let downloadUrl = url;
             if (urlObj.pathname.startsWith('/gallery/')) {
-                const path = urlObj.pathname.substring('/gallery/'.length);
+                const path = decodeURIComponent(urlObj.pathname.substring('/gallery/'.length));
                 downloadUrl = `/api/download?path=${encodeURIComponent(path)}`;
             }
             
@@ -300,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         selectedFile = null;
+        currentMatches = [];
         previewSection.style.display = 'none';
         
         const uploadAreaContent = document.querySelector('.upload-area-content');
@@ -317,5 +441,48 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (emptyStateRetryBtn) {
         emptyStateRetryBtn.addEventListener('click', resetUploadSearch);
+    }
+
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    if (downloadAllBtn) {
+        downloadAllBtn.addEventListener('click', async () => {
+            if (currentMatches.length === 0) return;
+            
+            try {
+                downloadAllBtn.disabled = true;
+                downloadAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparing ZIP...';
+                showToast('Creating ZIP archive of your photos...', 'info');
+                
+                const response = await fetch('/api/download/zip', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ paths: currentMatches })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate ZIP archive');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'memories.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showToast('ZIP download started!', 'success');
+            } catch (error) {
+                console.error('Bulk download failed:', error);
+                showToast('Failed to download ZIP archive.', 'error');
+            } finally {
+                downloadAllBtn.disabled = false;
+                downloadAllBtn.innerHTML = '<i class="fa-solid fa-file-zipper"></i> Download All (.ZIP)';
+            }
+        });
     }
 });
