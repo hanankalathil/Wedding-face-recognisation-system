@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Photos</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/astonia" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --primary-pink: #f5c6e8;
+            --primary-light: #fdf2fa;
+            --bg-color: #f6f6f6;
+            --text-main: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            inset: 0;
+            position: fixed;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sticky Header */
+        header {
+            background-color: white;
+            border-bottom: 1px solid #eaeaea;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: background-color 0.3s;
+        }
+
+        .back-btn:hover {
+            background-color: #f5e4f1;
+        }
+
+        h1 {
+            font-family: 'Astonia', serif;
+            font-size: 1.8rem;
+            font-weight: normal;
+            color: var(--text-main);
+        }
+
+        /* Scrollable Content */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Custom Scrollbar */
+        main::-webkit-scrollbar {
+            width: 6px;
+        }
+        main::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        main::-webkit-scrollbar-thumb {
+            background-color: #d1d1d1;
+            border-radius: 10px;
+        }
+
+        /* Loading State */
+        #loading-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .heart-loader {
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary-pink);
+            position: relative;
+            transform: rotate(-45deg);
+            animation: pulse-heart 1.2s infinite;
+            margin-bottom: 30px;
+        }
+        .heart-loader::before, .heart-loader::after {
+            content: '';
+            width: 40px;
+            height: 40px;
+            background-color: var(--primary-pink);
+            border-radius: 50%;
+            position: absolute;
+        }
+        .heart-loader::before {
+            top: -20px;
+            left: 0;
+        }
+        .heart-loader::after {
+            top: 0;
+            left: 20px;
+        }
+
+        @keyframes pulse-heart {
+            0% { transform: rotate(-45deg) scale(0.8); }
+            50% { transform: rotate(-45deg) scale(1.1); }
+            100% { transform: rotate(-45deg) scale(0.8); }
+        }
+
+        #loading-text {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        /* Skeleton Grid */
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+        }
+        .skeleton-item {
+            aspect-ratio: 1;
+            background-color: #e0e0e0;
+            border-radius: 12px;
+            animation: pulse-bg 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse-bg {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Empty State */
+        #empty-state {
+            display: none;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-weight: 500;
+        }
+
+        /* Gallery Grid */
+        #gallery-grid {
+            display: none;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .photo-container {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeInUp 0.6s forwards ease-out;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .photo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .photo-container:hover img {
+            transform: scale(1.05);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .photo-item-dl {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: transform 0.2s, background-color 0.2s;
+            color: #444;
+        }
+        .photo-item-dl:active {
+            transform: scale(0.9);
+        }
+        .photo-item-dl:hover {
+            background-color: white;
+            color: #000;
+        }
+
+        /* Sticky Footer */
+        footer {
+            background-color: white;
+            border-top: 1px solid #eaeaea;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.03);
+            padding: 15px 20px;
+            z-index: 10;
+        }
+
+        #bulk-download-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary-pink);
+            color: #222;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(245, 198, 232, 0.4);
+        }
+        #bulk-download-btn:active {
+            transform: scale(0.98);
+        }
+        #bulk-download-btn:hover {
+            background-color: #ecadd9;
+        }
+
+        /* Modal */
+        #photo-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-img {
+            max-width: 95%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        #close-modal {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #close-modal:hover {
+            background: rgba(255,255,255,0.25);
+        }
+        
+        .lucide-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="index.html" class="back-btn">
+            <i data-lucide="arrow-left" size="20"></i>
+        </a>
+        <h1>Your Photos</h1>
+    </header>
+
+    <main>
+        <!-- Loading State -->
+        <div id="loading-state">
+            <div class="heart-loader"></div>
+            <p id="loading-text">Analyzing your beautiful face...</p>
+            <div class="skeleton-grid">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state">
+            <p>No matching photos found.</p>
+        </div>
+
+        <!-- Gallery Grid -->
+        <div id="gallery-grid">
+            <!-- Photos will be injected here -->
+        </div>
+    </main>
+
+    <footer>
+        <button id="bulk-download-btn">
+            <i data-lucide="download" size="22"></i>
+            <span>Bulk Download All</span>
+        </button>
+    </footer>
+
+    <!-- Full-Screen Modal -->
+    <div id="photo-modal">
+        <button id="close-modal">
+            <i data-lucide="x" size="24"></i>
+        </button>
+        <img id="modal-img" src="" alt="Full screen view">
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loadingState = document.getElementById('loading-state');
+            const emptyState = document.getElementById('empty-state');
+            const galleryGrid = document.getElementById('gallery-grid');
+            const modal = document.getElementById('photo-modal');
+            const modalImg = document.getElementById('modal-img');
+            const closeModal = document.getElementById('close-modal');
+            const bulkBtn = document.getElementById('bulk-download-btn');
+            const footer = document.querySelector('footer');
+            
+            let currentMatches = [];
+
+            // Helper to hide footer if empty
+            const checkFooterVisibility = () => {
+                if(currentMatches.length === 0) {
+                    footer.style.display = 'none';
+                } else {
+                    footer.style.display = 'block';
+                }
+            };
+            checkFooterVisibility();
+
+            // Check Session Storage
+            const pendingSelfie = sessionStorage.getItem('pendingSelfie');
+            const matchedPhotos = sessionStorage.getItem('matchedPhotos');
+
+            if (pendingSelfie) {
+                // Show loading
+                loadingState.style.display = 'flex';
+                
+                try {
+                    // Convert base64 to Blob
+                    const base64Data = pendingSelfie.split(',')[1] || pendingSelfie;
+                    const byteCharacters = atob(base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], {type: 'image/jpeg'});
+                    const formData = new FormData();
+                    formData.append('file', blob, 'selfie.jpg');
+
+                    // POST to api
+                    fetch('http://localhost:8000/api/recognize', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        sessionStorage.removeItem('pendingSelfie');
+                        if (data.matches && data.matches.length > 0) {
+                            currentMatches = data.matches;
+                            sessionStorage.setItem('matchedPhotos', JSON.stringify(currentMatches));
+                            renderGrid(currentMatches);
+                        } else {
+                            showEmpty();
+                        }
+                    })
+                    .catch(err => {
+                        console.error('API Error:', err);
+                        showEmpty();
+                    });
+                } catch(e) {
+                    console.error('Data parsing error:', e);
+                    showEmpty();
+                }
+            } else if (matchedPhotos) {
+                currentMatches = JSON.parse(matchedPhotos);
+                if (currentMatches.length > 0) {
+                    renderGrid(currentMatches);
+                } else {
+                    showEmpty();
+                }
+            } else {
+                showEmpty();
+            }
+
+            function showEmpty() {
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'flex';
+                checkFooterVisibility();
+            }
+
+            function renderGrid(photos) {
+                loadingState.style.display = 'none';
+                galleryGrid.style.display = 'grid';
+                checkFooterVisibility();
+
+                photos.forEach((photoUrl, index) => {
+                    const container = document.createElement('div');
+                    container.className = 'photo-container';
+                    container.style.animationDelay = `${index * 0.1}s`;
+
+                    const img = document.createElement('img');
+                    
+                    let finalUrl = photoUrl;
+                    if (finalUrl.startsWith('/')) {
+                        finalUrl = 'http://localhost:8000' + finalUrl;
+                    } else if (!finalUrl.startsWith('http')) {
+                        finalUrl = 'http://localhost:8000/' + finalUrl; 
+                    }
+
+                    img.src = finalUrl;
+                    img.addEventListener('click', () => openModal(finalUrl));
+
+                    const dlBtn = document.createElement('button');
+                    dlBtn.className = 'photo-item-dl';
+                    dlBtn.innerHTML = '<i data-lucide="download" size="18"></i>';
+                    
+                    dlBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        downloadSingleImage(finalUrl, dlBtn);
+                    });
+
+                    container.appendChild(img);
+                    container.appendChild(dlBtn);
+                    galleryGrid.appendChild(container);
+                });
+                
+                lucide.createIcons();
+            }
+
+            function openModal(src) {
+                modalImg.src = src;
+                modal.style.display = 'flex';
+            }
+
+            closeModal.addEventListener('click', () => {
+                modal.style.display = 'none';
+                modalImg.src = '';
+            });
+
+            // Single Download
+            async function downloadSingleImage(url, btnElement) {
+                btnElement.innerHTML = '<i data-lucide="loader" size="18" class="lucide-spin"></i>';
+                lucide.createIcons();
+
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = objectUrl;
+                    a.download = url.split('/').pop() || 'photo.jpg';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(objectUrl);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    alert("Failed to download image.");
+                } finally {
+                    btnElement.innerHTML = '<i data-lucide="download" size="18"></i>';
+                    lucide.createIcons();
+                }
+            }
+
+            // Bulk Download
+            bulkBtn.addEventListener('click', async () => {
+                if (currentMatches.length === 0) return;
+
+                const originalHTML = bulkBtn.innerHTML;
+                bulkBtn.innerHTML = '<i data-lucide="loader" size="22" class="lucide-spin"></i><span>Downloading...</span>';
+                lucide.createIcons();
+
+                for (let i = 0; i < currentMatches.length; i++) {
+                    let finalUrl = currentMatches[i];
+                    if (finalUrl.startsWith('/')) {
+                        finalUrl = 'http://localhost:8000' + finalUrl;
+                    } else if (!finalUrl.startsWith('http')) {
+                        finalUrl = 'http://localhost:8000/' + finalUrl;
+                    }
+                    
+                    try {
+                        const response = await fetch(finalUrl);
+                        const blob = await response.blob();
+                        const objectUrl = URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = objectUrl;
+                        a.download = finalUrl.split('/').pop() || `photo_${i}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(objectUrl);
+                    } catch(e) {
+                        console.error('Failed to download', finalUrl);
+                    }
+
+                    // Wait 500ms between downloads
+                    if (i < currentMatches.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+
+                bulkBtn.innerHTML = originalHTML;
+                lucide.createIcons();
+            });
+        });
+    </script>
+</body>
+</html>

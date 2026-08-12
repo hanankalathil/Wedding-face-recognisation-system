@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Face Analysis</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css?v=2.0">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                    <path d="M12 12 2.1 12"></path>
+                    <path d="M12 12 21.9 8.3"></path>
+                </svg>
+                <span>AdminPortal</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" data-tab="users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    Users
+                </a>
+                <a href="#" class="nav-item" data-tab="analysis-images">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    Analysis Images
+                </a>
+                <a href="#" class="nav-item" data-tab="couple-photos">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"></path>
+                    </svg>
+                    Couple Photos
+                </a>
+                <a href="#" class="nav-item" data-tab="wifi-sharing">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                        <path d="M5 12.5c0-4.42 3.58-8 8-8s8 3.58 8 8"></path>
+                        <path d="M8 15c0-2.76 2.24-5 5-5s5 2.24 5 5"></path>
+                        <circle cx="13" cy="18" r="2"></circle>
+                    </svg>
+                    WiFi Camera
+                </a>
+
+                <a href="#" class="nav-item" data-tab="settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    Settings
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <button class="mobile-toggle" id="mobileToggleBtn" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="search-bar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="Search data...">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">A</div>
+                    <span>Admin User</span>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <h1 class="page-title" id="pageTitle">Overview</h1>
+                
+                <div id="dashboard-tab" class="tab-pane active">
+                    <!-- Stat Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Users</h3>
+                                <p class="stat-value" id="statUsers">...</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Images Analyzed</h3>
+                                <p class="stat-value" id="statImages">...</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Active Sessions</h3>
+                                <p class="stat-value" id="statSessions">1</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Data Table -->
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2>Recent Analyses</h2>
+                            <div style="display: flex; gap: 12px;">
+                                <button class="btn-primary" id="bulkUploadBtn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Bulk Upload
+                                </button>
+                                <button class="btn-refresh" id="refreshBtn">Refresh</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User Image</th>
+                                    <th>Timestamp</th>
+                                    <th>Status</th>
+                                    <th>Result Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Rows populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="users-tab" class="tab-pane hidden" style="display: none;">
+                    <div class="table-container" style="padding: 24px;">
+                        <h2>System Users</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">Unique recognized individuals in the database.</p>
+                        <div class="users-grid" id="usersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
+                            <!-- Users injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="analysis-images-tab" class="tab-pane hidden" style="display: none;">
+                    <div class="table-container" style="padding: 24px;">
+                        <div class="table-header" style="margin-bottom: 20px;">
+                            <h2>All Analysis Images</h2>
+                            <div style="display: flex; gap: 12px;">
+                                <button class="btn-primary" id="findDuplicatesBtn">Find Duplicates</button>
+                                <button class="btn-refresh" id="refreshImagesBtn">Refresh Images</button>
+                            </div>
+                        </div>
+                        <div class="gallery-grid" id="imagesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+                            <!-- Images injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="couple-photos-tab" class="tab-pane hidden" style="display: none;">
+                    <div class="table-container" style="padding: 24px;">
+                        <div class="table-header" style="margin-bottom: 20px;">
+                            <h2>Couple Photos</h2>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <button class="btn-secondary" id="manageCategoriesBtn" style="background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                    </svg>
+                                    Manage Categories
+                                </button>
+                                <button class="btn-primary" id="uploadCouplePhotoBtn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Upload Photo
+                                </button>
+                                <button class="btn-refresh" id="refreshCouplePhotosBtn">Refresh</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Category Filters -->
+                        <div class="category-filters" id="coupleCategoryFilters" style="display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;">
+                            <button class="filter-chip active" data-filter="all">All</button>
+                            <button class="filter-chip" data-filter="ceremony">Ceremony</button>
+                            <button class="filter-chip" data-filter="reception">Reception</button>
+                            <button class="filter-chip" data-filter="portraits">Portraits</button>
+                            <button class="filter-chip" data-filter="candid">Candid</button>
+                        </div>
+
+                        <div class="gallery-grid" id="couplePhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+                            <!-- Couple photos injected by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="wifi-sharing-tab" class="tab-pane hidden" style="display: none;">
+                    <div class="table-container" style="padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <h2>WiFi Sharing from Camera</h2>
+                                <p style="color: var(--text-muted); margin-top: 4px;">Upload images in real-time directly from your camera via FTP or local directory watching.</p>
+                            </div>
+                            <!-- Toggle control -->
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="wifiStatusBadge" class="status-badge status-inactive" style="padding: 8px 16px; font-size: 0.9rem; border-radius: 20px;">Receiver Stopped</span>
+                                <button class="btn-primary" id="toggleWifiBtn" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; border-radius: 12px; background: var(--success); cursor: pointer; border: none; color: white;">Start Sharing</button>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 30px;">
+                            <!-- Connection Details -->
+                            <div class="glass-panel" style="background: rgba(16, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                                <h3 style="margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; vertical-align: middle;"><rect x="2" y="2" width="20" height="20" rx="4"></rect><path d="M12 16v-4m0-4h.01"></path></svg>
+                                    FTP Connection Details
+                                </h3>
+                                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px; font-size: 0.95rem;">
+                                    <span style="color: var(--text-muted);">FTP Server IP:</span>
+                                    <strong id="ftpServerIP" style="color: var(--text-main); font-family: monospace;">Loading...</strong>
+                                    
+                                    <span style="color: var(--text-muted);">FTP Port:</span>
+                                    <strong id="ftpServerPort" style="color: var(--text-main); font-family: monospace;">Loading...</strong>
+                                    
+                                    <span style="color: var(--text-muted);">Username:</span>
+                                    <strong id="ftpUsername" style="color: var(--text-main); font-family: monospace;">Loading...</strong>
+                                    
+                                    <span style="color: var(--text-muted);">Password:</span>
+                                    <strong id="ftpPassword" style="color: var(--text-main); font-family: monospace;">Loading...</strong>
+                                </div>
+                                <div style="margin-top: 10px; padding: 12px; background: rgba(26, 54, 93, 0.08); border: 1px solid rgba(26, 54, 93, 0.2); border-radius: 8px; font-size: 0.85rem; color: #7EA0C4; line-height: 1.5;">
+                                    Configure your camera (Sony FTP, Canon Wireless Transfer, Nikon Utility) using these details. Connect both camera and PC to the same WiFi network.
+                                </div>
+                            </div>
+
+                            <!-- Directory Watcher Setup -->
+                            <div class="glass-panel" style="background: rgba(16, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                                <h3 style="margin-bottom: 8px; color: var(--accent); display: flex; align-items: center; gap: 10px;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; vertical-align: middle;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                    Watch Folder Importing
+                                </h3>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label for="watchFolderInput" style="font-size: 0.9rem; color: var(--text-muted);">Local folder to watch on PC:</label>
+                                    <input type="text" id="watchFolderInput" placeholder="e.g. data/wifi_imports" style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(6, 9, 19, 0.5); color: var(--text-main); font-size: 0.9rem; font-family: monospace; width: 100%;">
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="watchFolderEnabled" style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                                    <label for="watchFolderEnabled" style="font-size: 0.95rem; color: var(--text-main); cursor: pointer;">Enable Folder Watching</label>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                                    If your tethering software (Sony Imaging Edge, Lightroom, etc.) is already transferring photos to a folder, enable this to import them automatically.
+                                </div>
+                                <button class="btn-primary" id="saveWifiSettingsBtn" style="padding: 8px 16px; align-self: flex-start; font-size: 0.88rem; border-radius: 8px; cursor: pointer; border: none; color: white;">Save Settings</button>
+                            </div>
+                        </div>
+
+                        <!-- Camera Setup Guide (Accordion or steps) -->
+                        <div class="glass-panel" style="background: rgba(16, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; margin-bottom: 30px;">
+                            <h3 style="margin-bottom: 16px; color: var(--text-main); font-size: 1.2rem;">Camera Connection Instructions</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+                                <div style="border-right: 1px solid var(--border-color); padding-right: 15px;">
+                                    <h4 style="color: #C5A880; margin-bottom: 8px; font-size: 1rem;">Sony Camera FTP Setup</h4>
+                                    <ol style="margin-left: 18px; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; line-height: 1.4;">
+                                        <li>Connect camera to the same WiFi network as this PC.</li>
+                                        <li>Go to Menu &rarr; Network &rarr; FTP Transfer settings.</li>
+                                        <li>Set Server Address to PC local IP address.</li>
+                                        <li>Set Port to <span style="color:var(--text-main);font-family:monospace;">2121</span>.</li>
+                                        <li>Enter User: <span style="color:var(--text-main);font-family:monospace;">camera</span>, Pass: <span style="color:var(--text-main);font-family:monospace;">camera</span>.</li>
+                                        <li>Enable "Auto Transfer" in FTP options.</li>
+                                    </ol>
+                                </div>
+                                <div style="border-right: 1px solid var(--border-color); padding-right: 15px;">
+                                    <h4 style="color: #1A365D; margin-bottom: 8px; font-size: 1rem;">Canon Camera WiFi Setup</h4>
+                                    <ol style="margin-left: 18px; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; line-height: 1.4;">
+                                        <li>Enable Wi-Fi on the camera.</li>
+                                        <li>Choose "Transfer images to FTP server".</li>
+                                        <li>Select "Configure online" and connect to the WiFi.</li>
+                                        <li>Under IP Address settings, select FTP Server address. Enter PC local IP.</li>
+                                        <li>Set port to <span style="color:var(--text-main);font-family:monospace;">2121</span>, and login details.</li>
+                                    </ol>
+                                </div>
+                                <div>
+                                    <h4 style="color: #8BA7C8; margin-bottom: 8px; font-size: 1rem;">Nikon / Other Cameras</h4>
+                                    <ol style="margin-left: 18px; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 6px; line-height: 1.4;">
+                                        <li>Set up an FTP connection profile in your camera network menu.</li>
+                                        <li>Use IP address and port 2121 as the FTP host.</li>
+                                        <li>Set transfer mode to Auto to send photos instantly as you shoot them.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WiFi Live History Log -->
+                        <div class="table-container" style="box-shadow: none; border: 1px solid var(--border-color); background: rgba(16, 23, 42, 0.2); margin-top: 20px;">
+                            <div class="table-header">
+                                <h2>Live Transferred Photos</h2>
+                                <div style="display: flex; gap: 12px; align-items: center;">
+                                    <span id="liveIndicator" style="width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Real-time monitoring active</span>
+                                    <button class="btn-refresh" id="clearWifiHistoryBtn" style="padding: 6px 14px; font-size: 0.85rem;">Clear Log</button>
+                                </div>
+                            </div>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Source Method</th>
+                                        <th>Time Received</th>
+                                        <th>Analysis Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wifiHistoryTableBody">
+                                    <tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-muted);">No camera uploads yet. Configure your camera and take a shot!</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settings-tab" class="tab-pane hidden" style="display: none;">
+                    <div class="table-container" style="padding: 24px; max-width: 600px;">
+                        <h2>General Settings</h2>
+                        <form id="settingsForm" style="margin-top: 24px; display: flex; flex-direction: column; gap: 20px;">
+                            <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+                                <label style="font-weight: 500; font-size: 0.95rem; color: var(--text-light);">Couple's Names</label>
+                                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+                                        <label for="partner1Input" style="font-size: 0.8rem; color: var(--text-muted);">Groom / Partner 1</label>
+                                        <input type="text" id="partner1Input" required placeholder="e.g. Muhammad Hanan" style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-light); font-size: 0.95rem; width: 100%;">
+                                    </div>
+                                    <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px;">
+                                        <label for="partner2Input" style="font-size: 0.8rem; color: var(--text-muted);">Bride / Partner 2</label>
+                                        <input type="text" id="partner2Input" placeholder="e.g. Shifa Fathima" style="padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-light); font-size: 0.95rem; width: 100%;">
+                                    </div>
+                                </div>
+                                <small style="color: var(--text-muted); font-size: 0.85rem;">These will be displayed in the website header, navigation menu, and welcome screens, and formatted on separate lines on the home page.</small>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn-primary" style="padding: 10px 24px; border-radius: 8px; font-weight: 500;">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Mobile Sidebar Overlay -->
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        </main>
+    </div>
+
+    <!-- Bulk Upload Modal -->
+    <div class="modal-overlay hidden" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Bulk Photo Upload</h2>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-container" id="adminUploadContainer">
+                    <input type="file" id="adminFileInput" accept="image/*" multiple hidden>
+                    <div class="upload-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <h3>Drag & Drop photos here</h3>
+                        <p>Upload multiple images for analysis</p>
+                        <button class="btn-primary" id="adminBrowseBtn">Browse Files</button>
+                    </div>
+                </div>
+                
+                <div class="bulk-preview-area hidden" id="bulkPreviewArea">
+                    <div class="preview-header">
+                        <h3 id="selectedFilesCount">0 files selected</h3>
+                        <button class="btn-refresh" id="clearFilesBtn" style="padding: 4px 12px; font-size: 0.8rem;">Clear All</button>
+                    </div>
+                    <div class="preview-grid" id="previewGrid">
+                        <!-- Preview images injected by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-refresh" id="cancelUploadBtn">Cancel</button>
+                <button class="btn-primary" id="startUploadBtn" disabled>Start Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Couple Photo Upload Modal -->
+    <div class="modal-overlay hidden" id="coupleUploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Upload Couple Photo</h2>
+                <button class="close-btn" id="closeCoupleModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="coupleCategorySelect" style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-light);">Select Category</label>
+                    <div class="custom-dropdown" id="coupleCategoryDropdown">
+                        <div class="custom-dropdown-trigger">
+                            <span class="custom-dropdown-selected">Ceremony</span>
+                            <svg class="custom-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                        <div class="custom-dropdown-menu">
+                            <div class="custom-dropdown-option active" data-value="ceremony">Ceremony</div>
+                            <div class="custom-dropdown-option" data-value="reception">Reception</div>
+                            <div class="custom-dropdown-option" data-value="portraits">Portraits</div>
+                            <div class="custom-dropdown-option" data-value="candid">Candid</div>
+                        </div>
+                        <select id="coupleCategorySelect" style="display: none;">
+                            <option value="ceremony" selected>Ceremony</option>
+                            <option value="reception">Reception</option>
+                            <option value="portraits">Portraits</option>
+                            <option value="candid">Candid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="upload-container" id="coupleUploadContainer">
+                    <input type="file" id="coupleFileInput" accept="image/*" multiple hidden>
+                    <div class="upload-content">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <h3>Drag & Drop photos here</h3>
+                        <p>Upload couple photos to selected category</p>
+                        <button class="btn-primary" id="coupleBrowseBtn">Browse Files</button>
+                    </div>
+                </div>
+                
+                <div class="bulk-preview-area hidden" id="couplePreviewArea">
+                    <div class="preview-header">
+                        <h3 id="coupleSelectedCount">0 files selected</h3>
+                        <button class="btn-refresh" id="clearCoupleFilesBtn" style="padding: 4px 12px; font-size: 0.8rem;">Clear All</button>
+                    </div>
+                    <div class="preview-grid" id="couplePreviewGrid">
+                        <!-- Preview images injected by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-refresh" id="cancelCoupleUploadBtn">Cancel</button>
+                <button class="btn-primary" id="startCoupleUploadBtn" disabled>Start Upload</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Photos Modal -->
+    <div class="modal-overlay hidden" id="userPhotosModal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div class="modal-header">
+                <h2 id="userPhotosModalTitle">User Photos</h2>
+                <button class="close-btn" id="closeUserPhotosBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="gallery-grid" id="userPhotosGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px;">
+                    <!-- Photos injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Image Modal -->
+    <div class="modal-overlay hidden" id="fullscreenImageModal" style="z-index: 10000; background: rgba(0,0,0,0.9);">
+        <button class="close-btn" id="closeFullscreenBtn" style="position: absolute; top: 20px; right: 20px; color: white; font-size: 2rem;">&times;</button>
+        <img id="fullscreenImage" src="" alt="Fullscreen" style="max-width: 90%; max-height: 90%; object-fit: contain;">
+    </div>
+
+    <!-- Duplicates Modal -->
+    <div class="modal-overlay hidden" id="duplicatesModal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div class="modal-header">
+                <h2>Duplicate Photos</h2>
+                <button class="close-btn" id="closeDuplicatesBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div id="duplicatesList">
+                    <!-- Duplicates injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Manager Modal -->
+    <div class="modal-overlay hidden" id="categoryManagerModal">
+        <div class="modal-content" style="max-width: 500px; width: 90%;">
+            <div class="modal-header">
+                <h2>Manage Categories</h2>
+                <button class="close-btn" id="closeCategoriesBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="category-list-container" style="margin-bottom: 24px; max-height: 250px; overflow-y: auto;">
+                    <ul id="categoriesList" style="list-style: none; padding: 0; margin: 0;">
+                        <!-- Categories dynamically injected by JS -->
+                    </ul>
+                </div>
+                <div class="add-category-form" style="display: flex; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <input type="text" id="newCategoryInput" placeholder="New category name..." style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-light); font-size: 0.95rem;">
+                    <button class="btn-primary" id="addCategoryBtn" style="padding: 10px 20px;">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js?v=2.2"></script>
+</body>
+</html>

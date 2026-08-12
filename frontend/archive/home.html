@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wedding Invitation - Noushiya & Shabeer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=3.0">
+</head>
+<body class="home-body">
+    <div class="home-container">
+        
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <img src="logo.png" alt="Techcora Logo" class="home-logo">
+            <button class="music-btn">
+                <span>Nikkah nasheed</span>
+                <i class="fa-solid fa-music"></i>
+            </button>
+        </div>
+
+        <!-- Calligraphy -->
+        <div class="calligraphy">
+            بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ
+        </div>
+
+        <!-- Invitation Text -->
+        <p class="invite-text">
+            We cordially invite You to honor us with Your<br>presence at the blessed occasion of our wedding
+        </p>
+
+        <!-- Names -->
+        <div class="couple-names">
+            Noushiya<br>
+            <span class="ampersand">&</span><br>
+            Shabeer
+        </div>
+
+        <!-- Action Slider -->
+        <div class="action-container">
+            <div class="swipe-btn" id="swipeBtn">
+                <div class="swipe-text">Yeah, I am attending</div>
+                <div class="swipe-thumb" id="swipeThumb">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const thumb = document.getElementById('swipeThumb');
+        const container = document.getElementById('swipeBtn');
+        const text = document.querySelector('.swipe-text');
+        let isDragging = false;
+        let startX;
+        let currentLeft = 5;
+        let maxLeft;
+
+        function updateMaxLeft() {
+            maxLeft = container.offsetWidth - thumb.offsetWidth - 5;
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            currentLeft = parseInt(window.getComputedStyle(thumb).left) || 5;
+            thumb.style.transition = 'none';
+            updateMaxLeft();
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            const currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+            const diffX = currentX - startX;
+            let newLeft = currentLeft + diffX;
+            
+            if (newLeft < 5) newLeft = 5;
+            if (newLeft > maxLeft) newLeft = maxLeft;
+            
+            thumb.style.left = newLeft + 'px';
+            text.style.opacity = 1 - (newLeft / maxLeft);
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            thumb.style.transition = 'left 0.3s ease';
+            
+            if (parseInt(thumb.style.left) >= maxLeft - 10) {
+                window.location.href = 'index.html';
+            } else {
+                thumb.style.left = '5px';
+                text.style.opacity = '1';
+            }
+        }
+
+        thumb.addEventListener('mousedown', startDrag);
+        thumb.addEventListener('touchstart', startDrag);
+        
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('touchmove', onDrag, {passive: false});
+        
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+        
+        window.addEventListener('resize', updateMaxLeft);
+    </script>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Techora Memories - AI-Powered Wedding Photo Sharing</title>
+    
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=3.0">
+    <link rel="stylesheet" href="css/responsive.css?v=2.0">
+    <style>
+        /* Specific Styles for Index */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+            background: url('assets/backgrounds/hero-image.jpg') no-repeat center center/cover;
+            background-color: #1a1a1a;
+            padding-top: 100px;
+            padding-bottom: 60px;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%);
+        }
+
+        .hero-card {
+            position: relative;
+            z-index: 10;
+            color: #ffffff;
+            max-width: 600px;
+            width: 90%;
+            padding: 50px 40px;
+            background: rgba(17, 24, 39, 0.55); /* Darker frosted glass for high contrast on light backgrounds */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            margin: 0 auto;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: cardFadeUp 1s ease-out;
+            margin-top: 10px;
+        }
+
+        @keyframes cardFadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-badge {
+            background: rgba(197, 168, 128, 0.15);
+            border: 1px solid rgba(197, 168, 128, 0.3);
+            color: var(--color-accent);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            margin-bottom: 25px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero h1 {
+            font-size: 3.8rem;
+            line-height: 1.1;
+            margin-bottom: 10px;
+            color: #ffffff;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-shadow: none;
+        }
+
+        .hero h1.split-names {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.15;
+            margin-bottom: 15px;
+            font-size: 3.5rem;
+        }
+
+        .hero h1.split-names .partner-name {
+            display: block;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: #ffffff;
+            white-space: normal;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .hero h1.split-names .ampersand {
+            display: block;
+            font-family: var(--font-heading);
+            font-weight: 400;
+            font-style: italic;
+            color: var(--color-accent);
+            font-size: 2.6rem;
+            margin: 4px 0;
+            line-height: 1;
+        }
+
+        .hero-divider {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+        }
+
+        .divider-icon {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 1.1rem;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            line-height: 1.7;
+            margin-bottom: 35px;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: none;
+            max-width: 480px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Buttons responsive override */
+        .hero-btns .btn {
+            flex: 1;
+            max-width: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 50px;
+            padding: 14px 28px;
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .hero-btns .btn-primary {
+            background: linear-gradient(135deg, #C5A880 0%, #A3845B 100%);
+            color: #111827; /* Dark charcoal text for premium high contrast on gold */
+            box-shadow: 0 8px 20px rgba(197, 168, 128, 0.35);
+            font-weight: 700;
+        }
+
+        .hero-btns .btn-primary:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 28px rgba(197, 168, 128, 0.55), 0 0 15px rgba(197, 168, 128, 0.2);
+            background: linear-gradient(135deg, #d4b993 0%, #b09168 100%);
+            color: #111827;
+        }
+
+        .hero-btns .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            font-weight: 600;
+        }
+
+        .hero-btns .btn-secondary:hover {
+            background: #ffffff;
+            border-color: #ffffff;
+            transform: translateY(-3px) scale(1.03);
+            color: #111827;
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.25);
+        }
+
+        /* Features */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+        }
+
+        .feature-card {
+            padding: 40px 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--color-primary);
+            margin-bottom: 20px;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            background-color: var(--color-white);
+        }
+
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 50px;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background-color: var(--color-primary);
+            color: var(--color-white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-family: var(--font-heading);
+            margin: 0 auto 20px;
+        }
+
+        /* Testimonials */
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .testimonial-card {
+            padding: 30px;
+            font-style: italic;
+        }
+
+        .testimonial-author {
+            margin-top: 20px;
+            font-style: normal;
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+
+        @media screen and (max-width: 768px) {
+            .hero {
+                padding-top: 120px;
+                padding-bottom: 50px;
+            }
+            .hero-card {
+                padding: 40px 25px;
+                border-radius: 24px;
+                margin-top: 0;
+            }
+            .hero h1 { font-size: 2.5rem; }
+            .hero h1.split-names { font-size: 2.2rem; }
+            .hero h1.split-names .ampersand { font-size: 1.8rem; margin: 2px 0; }
+            .hero p { font-size: 1rem; }
+            .hero-btns { 
+                flex-direction: column; 
+                gap: 12px;
+            }
+            .hero-btns .btn {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>Techora Memories</span>
+            </a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link active">Home</a></li>
+                <li><a href="find-my-photos.html" class="nav-link">Find My Photos</a></li>
+                <li><a href="gallery.html" class="nav-link">Gallery</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-card fade-in">
+            <div class="hero-badge"><i class="fa-solid fa-heart"></i> WELCOME GUESTS</div>
+            <h1>Oliver & Lily</h1>
+            <div class="hero-divider">
+                <span class="divider-line"></span>
+                <span class="divider-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;">
+                        <circle cx="12" cy="14" r="6" />
+                        <path d="M9.5 8.5 L8.5 5.5 L12 3 L15.5 5.5 L14.5 8.5 Z" />
+                        <path d="M8.5 5.5 L15.5 5.5" />
+                        <path d="M12 3 L12 5.5" />
+                        <path d="M9.5 8.5 L12 5.5 L14.5 8.5" />
+                    </svg>
+                </span>
+                <span class="divider-line"></span>
+            </div>
+            <p>We are so happy to share our special day with you. Upload a selfie to find all your photos, or browse our cherishable albums below.</p>
+            <div class="hero-btns">
+                <a href="find-my-photos.html" class="btn btn-primary">Find My Photos <i class="fa-solid fa-wand-magic-sparkles"></i></a>
+                <a href="#albumsSection" class="btn btn-secondary">Browse Albums <i class="fa-solid fa-chevron-down"></i></a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Wedding Albums Section -->
+    <section class="section albums-section" id="albumsSection" style="padding-top: 80px; padding-bottom: 80px; background: var(--color-bg-light);">
+        <div class="container">
+            <div class="text-center fade-in">
+                <h2 class="section-title">Cherished <span>Albums</span></h2>
+                <p class="section-subtitle" style="margin-bottom: 3rem;">Browse through the beautiful moments captured across our celebrations.</p>
+            </div>
+            <div class="albums-grid" id="homepageAlbumsGrid">
+                <!-- Javascript will populate dynamic couple cards here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section features container">
+        <div class="text-center fade-in">
+            <h2 class="section-title">Why Choose <span>Techora Memories</span>?</h2>
+            <p class="section-subtitle">Experience the magic of AI in finding and preserving your most precious moments, delivered with absolute elegance.</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card glass-panel fade-in">
+                <div class="feature-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                <h3>AI Face Recognition</h3>
+                <p>Our advanced AI scans and matches your face across thousands of wedding photos in seconds.</p>
+            </div>
+            <div class="feature-card glass-panel fade-in">
+                <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3>Secure Photo Access</h3>
+                <p>Your privacy is our priority. Access is securely granted only to your verified matches.</p>
+            </div>
+            <div class="feature-card glass-panel fade-in">
+                <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h3>Instant Search</h3>
+                <p>No more scrolling through endless albums. Find all your photos instantly.</p>
+            </div>
+            <div class="feature-card glass-panel fade-in">
+                <div class="feature-icon"><i class="fa-regular fa-gem"></i></div>
+                <h3>High-Quality Downloads</h3>
+                <p>Download your memories in their original, stunning high resolution.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="section how-it-works" style="background: rgba(26, 54, 93, 0.03);">
+        <div class="container">
+            <div class="text-center fade-in">
+                <h2 class="section-title">How It <span>Works</span></h2>
+                <p class="section-subtitle">Four simple, seamless steps to relive your beautiful moments.</p>
+            </div>
+
+            <div class="steps-container">
+                <div class="step fade-in">
+                    <div class="step-number">1</div>
+                    <h3>Upload Selfie</h3>
+                    <p>Take or upload a quick selfie to get started.</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">2</div>
+                    <h3>AI Scans</h3>
+                    <p>Our AI safely processes and scans your facial features.</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">3</div>
+                    <h3>Match Found</h3>
+                    <p>The system instantly finds your wedding photos.</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">4</div>
+                    <h3>Download & Share</h3>
+                    <p>Save your memories and share them with loved ones.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="section testimonials container">
+        <div class="text-center fade-in">
+            <h2 class="section-title">What Our Guests Say</h2>
+            <p class="section-subtitle">Real experiences from our beautiful weddings.</p>
+        </div>
+
+        <div class="testimonials-grid">
+            <div class="testimonial-card glass-panel fade-in">
+                <p>"I couldn't believe how fast it found every single picture of my family. It saved me hours of searching!"</p>
+                <div class="testimonial-author">- Sarah Jenkins</div>
+            </div>
+            <div class="testimonial-card glass-panel fade-in">
+                <p>"The interface is stunning and so easy to use. I took a selfie and instantly had all my memories downloaded."</p>
+                <div class="testimonial-author">- Michael Chen</div>
+            </div>
+            <div class="testimonial-card glass-panel fade-in">
+                <p>"Such a premium experience. Techora Memories made our wedding day even more special for our guests."</p>
+                <div class="testimonial-author">- Emily & David</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-grid fade-in">
+                <!-- Brand Section -->
+                <div class="footer-col brand-col">
+                    <a href="index.html" class="footer-brand-logo">
+                        <span class="brand-text">Techora</span>
+                        <span class="brand-subtext">Memories</span>
+                    </a>
+                    <p class="footer-description">Preserving your cherished wedding moments with the elegance of AI-powered face recognition.</p>
+                    <div class="footer-socials">
+                        <a href="https://instagram.com/techora.inofficial" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                        <a href="https://techora.in" target="_blank" rel="noopener noreferrer" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="footer-col links-col">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li><a href="index.html" class="footer-link-item">Home</a></li>
+                        <li><a href="find-my-photos.html" class="footer-link-item">Find My Photos</a></li>
+                        <li><a href="gallery.html" class="footer-link-item">Gallery</a></li>
+                        <li><a href="contact.html" class="footer-link-item">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact & Info -->
+                <div class="footer-col contact-col">
+                    <h3>Get In Touch</h3>
+                    <div class="contact-info-item"><i class="fa-solid fa-envelope"></i><a href="mailto:support@techora.in">support@techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-phone"></i><a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer">9446151838</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-globe"></i><a href="https://techora.in" target="_blank" rel="noopener noreferrer">techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-location-dot"></i><span>Techora Office, Bangalore</span></div>
+                </div>
+            </div>
+            
+            <div class="footer-divider-glow"></div>
+
+            <div class="footer-bottom-grid fade-in">
+                <p class="copyright-text">Powered by <a href="https://techora.in" target="_blank" rel="noopener noreferrer">Techora</a>. &copy; 2026 Techora. All rights reserved.</p>
+                <div class="footer-legal-links">
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms & Conditions</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js?v=3.0"></script>
+</body>
+</html>

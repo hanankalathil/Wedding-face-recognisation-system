@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find My Photos - Techora Memories</title>
+    
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=3.0">
+    <link rel="stylesheet" href="css/responsive.css?v=2.0">
+    <link rel="stylesheet" href="css/photos.css?v=2.0">
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar scrolled"> <!-- Always scrolled on subpages -->
+        <div class="container nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>Techora Memories</span>
+            </a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="find-my-photos.html" class="nav-link active">Find My Photos</a></li>
+                <li><a href="gallery.html" class="nav-link">Gallery</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Upload Section -->
+    <section class="section upload-section">
+        <div class="container">
+            <div class="upload-card fade-in">
+                
+                <div class="upload-area-content">
+                    <div class="upload-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> AI PHOTO SEARCH</div>
+                    <h2 class="section-title">Find Your Photos</h2>
+                    <p class="section-subtitle">Simply upload a photo or take a selfie, and our advanced AI will instantly scan the gallery to find your memories.</p>
+
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="fileInput" accept="image/jpeg, image/png, image/webp" hidden>
+                        
+                        <div class="upload-text">
+                            <div class="upload-icon"><i class="fa-solid fa-camera"></i></div>
+                            <h3>Drag & Drop your photo here</h3>
+                            <p>or click to browse from your device</p>
+                            <p style="font-size: 0.75rem; opacity: 0.4; margin-bottom: 0;">JPG, PNG, WebP supported</p>
+                        </div>
+                    </div>
+
+                    <div class="upload-separator">
+                        <span>OR</span>
+                    </div>
+
+                    <button type="button" class="btn camera-btn" id="cameraBtn">
+                        <i class="fa-solid fa-camera-retro"></i> Take a Selfie
+                    </button>
+                </div>
+
+                <!-- Preview Section -->
+                <div class="preview-section" id="previewSection">
+                    <h3>Photo Selected</h3>
+                    <img id="previewImg" src="" alt="Selected Preview">
+                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" id="retryBtn">Choose Another</button>
+                        <button type="button" class="btn btn-primary" id="uploadSubmitBtn">Start Search <i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                    </div>
+                </div>
+
+                <!-- Loading State Overlay -->
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <div class="loading-text" id="loadingText">Scanning your face...</div>
+                    <p style="margin-top: 10px; color: var(--color-text-light);">Please wait, magic is happening.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="section results-section" id="resultsSection">
+        <div class="container">
+            <div class="text-center">
+                <h2 class="section-title">Your Memories</h2>
+                <p class="section-subtitle" style="margin-bottom: 1.5rem;">We found these beautiful moments matching your profile.</p>
+                <button type="button" class="btn btn-secondary" id="searchAgainBtn" style="margin-bottom: 3rem; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-arrow-left"></i> Search Another Selfie
+                </button>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div style="font-size: 4rem; margin-bottom: 20px; color: var(--color-primary);"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <h3>No matching photos found.</h3>
+                <p>We couldn't find a strong match in the gallery. Try uploading another clear, well-lit selfie.</p>
+                <button type="button" class="btn btn-primary" id="emptyStateRetryBtn" style="margin-top: 20px;">Try Again</button>
+            </div>
+
+            <div class="results-grid" id="resultsGrid">
+                <!-- Results populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Camera Modal -->
+    <div class="camera-modal" id="cameraModal">
+        <div class="camera-container" id="cameraContainer">
+            <video id="cameraFeed" autoplay playsinline></video>
+            <div class="camera-controls">
+                <button type="button" class="btn btn-secondary" id="cancelCameraBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="captureBtn">Capture</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Modal -->
+    <div class="modal" id="imageModal">
+        <span class="close-modal">&times;</span>
+        <span class="download-modal-btn" id="modalDownloadBtn" title="Download Image"><i class="fa-solid fa-download"></i></span>
+        <img class="modal-content" id="modalImg">
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-grid fade-in">
+                <!-- Brand Section -->
+                <div class="footer-col brand-col">
+                    <a href="index.html" class="footer-brand-logo">
+                        <span class="brand-text">Techora</span>
+                        <span class="brand-subtext">Memories</span>
+                    </a>
+                    <p class="footer-description">Preserving your cherished wedding moments with the elegance of AI-powered face recognition.</p>
+                    <div class="footer-socials">
+                        <a href="https://instagram.com/techora.inofficial" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                        <a href="https://techora.in" target="_blank" rel="noopener noreferrer" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="footer-col links-col">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li><a href="index.html" class="footer-link-item">Home</a></li>
+                        <li><a href="find-my-photos.html" class="footer-link-item active-link">Find My Photos</a></li>
+                        <li><a href="gallery.html" class="footer-link-item">Gallery</a></li>
+                        <li><a href="contact.html" class="footer-link-item">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact & Info -->
+                <div class="footer-col contact-col">
+                    <h3>Get In Touch</h3>
+                    <div class="contact-info-item"><i class="fa-solid fa-envelope"></i><a href="mailto:support@techora.in">support@techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-phone"></i><a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer">9446151838</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-globe"></i><a href="https://techora.in" target="_blank" rel="noopener noreferrer">techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-location-dot"></i><span>Techora Office, Bangalore</span></div>
+                </div>
+            </div>
+            
+            <div class="footer-divider-glow"></div>
+
+            <div class="footer-bottom-grid fade-in">
+                <p class="copyright-text">Powered by <a href="https://techora.in" target="_blank" rel="noopener noreferrer">Techora</a>. &copy; 2026 Techora. All rights reserved.</p>
+                <div class="footer-legal-links">
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms & Conditions</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js?v=3.0"></script>
+    <script type="module" src="js/upload.js?v=2.2"></script>
+</body>
+</html>

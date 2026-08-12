@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+ENV/
+env/
+.env
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases and user data
+backend/database.json
+backend/data/database.json
+backend/gallery/
+backend/data/gallery/
+backend/data/wifi_imports/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

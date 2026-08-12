@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gallery - Techora Memories</title>
+    
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="css/fonts.css">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=3.0">
+    <link rel="stylesheet" href="css/responsive.css?v=2.0">
+    <link rel="stylesheet" href="css/gallery.css?v=2.0">
+    <link rel="stylesheet" href="css/photos.css?v=2.0">
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar scrolled">
+        <div class="container nav-container">
+            <a href="index.html" class="nav-brand">
+                <span>Techora Memories</span>
+            </a>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="find-my-photos.html" class="nav-link">Find My Photos</a></li>
+                <li><a href="gallery.html" class="nav-link active">Gallery</a></li>
+                <li><a href="contact.html" class="nav-link">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Gallery Section -->
+    <section class="section gallery-section">
+        <div class="container">
+            <div class="text-center fade-in">
+                <h1 class="section-title">Wedding Gallery</h1>
+                <p class="section-subtitle">A collection of beautiful moments captured on our special day.</p>
+            </div>
+
+            <!-- View Toggle Selector -->
+            <div class="view-selector fade-in">
+                <button class="view-selector-btn active" id="btnShowAlbums">
+                    <i class="fa-solid fa-heart"></i> Couple Albums
+                </button>
+                <button class="view-selector-btn" id="btnShowAll">
+                    <i class="fa-solid fa-images"></i> All Photos
+                </button>
+            </div>
+
+            <!-- Couple Albums View -->
+            <div id="albumsView" class="fade-in">
+                <div class="albums-grid" id="albumsGrid">
+                    <!-- Dynamic Couple Albums will be injected here -->
+                </div>
+            </div>
+
+            <!-- All Photos View (Hidden by default) -->
+            <div id="allPhotosView" class="hidden fade-in">
+                <!-- Dynamic Filters -->
+                <div class="gallery-filters" id="galleryFilters">
+                    <!-- Javascript will populate dynamic filters here -->
+                </div>
+
+                <!-- Gallery Grid for All Photos -->
+                <div class="gallery-grid" id="galleryGrid">
+                    <!-- Javascript will populate items here -->
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination" id="paginationContainer">
+                    <!-- Javascript will inject page buttons here -->
+                </div>
+            </div>
+
+            <!-- Album Detail View (Hidden by default) -->
+            <div id="albumDetailView" class="hidden fade-in">
+                <div class="album-detail-header">
+                    <button class="back-btn" id="btnBackToAlbums">
+                        <i class="fa-solid fa-arrow-left"></i> Back to Albums
+                    </button>
+                    <div class="album-title-area">
+                        <h2 id="albumTitle">Album</h2>
+                        <span id="albumPhotoCount">0 photos</span>
+                    </div>
+                </div>
+                <!-- Album Gallery Grid -->
+                <div class="gallery-grid" id="galleryGridAlbum">
+                    <!-- Javascript will populate items here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Fullscreen Modal -->
+    <div class="modal" id="imageModal">
+        <span class="close-modal">&times;</span>
+        <span class="download-modal-btn" id="modalDownloadBtn" title="Download Image"><i class="fa-solid fa-download"></i></span>
+        <img class="modal-content" id="modalImg">
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-grid fade-in">
+                <!-- Brand Section -->
+                <div class="footer-col brand-col">
+                    <a href="index.html" class="footer-brand-logo">
+                        <span class="brand-text">Techora</span>
+                        <span class="brand-subtext">Memories</span>
+                    </a>
+                    <p class="footer-description">Preserving your cherished wedding moments with the elegance of AI-powered face recognition.</p>
+                    <div class="footer-socials">
+                        <a href="https://instagram.com/techora.inofficial" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+                        <a href="https://techora.in" target="_blank" rel="noopener noreferrer" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="footer-col links-col">
+                    <h3>Explore</h3>
+                    <ul>
+                        <li><a href="index.html" class="footer-link-item">Home</a></li>
+                        <li><a href="find-my-photos.html" class="footer-link-item">Find My Photos</a></li>
+                        <li><a href="gallery.html" class="footer-link-item active-link">Gallery</a></li>
+                        <li><a href="contact.html" class="footer-link-item">Contact Us</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact & Info -->
+                <div class="footer-col contact-col">
+                    <h3>Get In Touch</h3>
+                    <div class="contact-info-item"><i class="fa-solid fa-envelope"></i><a href="mailto:support@techora.in">support@techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-phone"></i><a href="https://wa.me/919446151838" target="_blank" rel="noopener noreferrer">9446151838</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-globe"></i><a href="https://techora.in" target="_blank" rel="noopener noreferrer">techora.in</a></div>
+                    <div class="contact-info-item"><i class="fa-solid fa-location-dot"></i><span>Techora Office, Bangalore</span></div>
+                </div>
+            </div>
+            
+            <div class="footer-divider-glow"></div>
+
+            <div class="footer-bottom-grid fade-in">
+                <p class="copyright-text">Powered by <a href="https://techora.in" target="_blank" rel="noopener noreferrer">Techora</a>. &copy; 2026 Techora. All rights reserved.</p>
+                <div class="footer-legal-links">
+                    <a href="privacy.html">Privacy Policy</a>
+                    <a href="terms.html">Terms & Conditions</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module" src="js/main.js?v=3.0"></script>
+    <script type="module" src="js/gallery.js?v=2.4"></script>
+</body>
+</html>

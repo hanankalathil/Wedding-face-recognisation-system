@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Face Analysis App</title>
+    <!-- Use Inter font for a professional look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=3.0">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <img src="logo.png" alt="Techcora Logo" style="width: 80px; margin-bottom: 15px; border-radius: 50%; box-shadow: 0 4px 15px rgba(255, 77, 133, 0.3);">
+                <div class="hero-badge">Techcora</div>
+                <h1 class="hero-title">Techcora<br>WedLens</h1>
+                <p class="hero-subtitle">Capture the magic of your special day with our elegant facial recognition system.</p>
+            </div>
+            <div class="hero-bg-glow"></div>
+        </div>
+
+        <!-- Main Upload Area -->
+        <main class="main-content">
+            <div class="upload-card" id="uploadContainer">
+                <input type="file" id="fileInput" accept="image/*" hidden>
+                
+                <div class="upload-content">
+                    <div class="icon-wrapper">
+                        <i class="fa-solid fa-fingerprint gradient-text"></i>
+                    </div>
+                    <h3>Verify Identity</h3>
+                    <p>Upload a clear portrait to begin analysis.</p>
+                    <button class="app-btn-primary" id="browseBtn">
+                        <i class="fa-solid fa-camera"></i> Take Photo
+                    </button>
+                    <button class="app-btn-text" onclick="document.getElementById('fileInput').click()">
+                        Or choose from gallery
+                    </button>
+                </div>
+                
+                <div class="preview-container hidden" id="previewContainer">
+                    <div class="preview-wrapper">
+                        <img id="imagePreview" src="" alt="Preview">
+                        <div class="scanning-line hidden"></div>
+                    </div>
+                    <div class="preview-actions">
+                        <button class="app-btn-secondary" id="removeBtn"><i class="fa-solid fa-xmark"></i></button>
+                        <button class="app-btn-primary full-width" id="analyzeBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Start Analysis</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-message hidden" id="statusMessage">
+                <div class="app-spinner"></div>
+                <p>Authenticating biometric data...</p>
+                <span class="status-sub">Please wait, do not close the app.</span>
+            </div>
+        </main>
+
+        <!-- Phone Navigation Bar Removed -->
+    </div>
+
+    <script src="script.js?v=2"></script>
+</body>
+</html>
