@@ -3,6 +3,7 @@ services:
     name: wedding-face-recognition-system
     env: python
     plan: free
+    repo: https://github.com/hanankalathil/Wedding-face-recognisation-system
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python backend/run.py
     envVars:
