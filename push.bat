@@ -33,7 +33,13 @@ if errorlevel 1 (
 
 :: Prompt user for custom commit message
 set "commit_msg="
-set /p "commit_msg=Enter commit message (default: Update): "
+set /p "commit_msg=Enter commit message (type 'cancel' to abort): "
+
+if /i "!commit_msg!"=="cancel" (
+    echo [INFO] Push aborted by user.
+    pause
+    exit /b 0
+)
 
 if "!commit_msg!"=="" (
     set "commit_msg=Update"
