@@ -146,12 +146,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let visibleUsersCount = 16;
+    let visibleImagesCount = 16;
+    let currentUsersList = [];
+    let currentPhotosList = [];
+
+    const loadMoreUsersBtn = document.getElementById('loadMoreUsersBtn');
+    if (loadMoreUsersBtn) {
+        loadMoreUsersBtn.addEventListener('click', () => {
+            visibleUsersCount += 16;
+            renderUsersTab(currentUsersList);
+        });
+    }
+
+    const loadMoreImagesBtn = document.getElementById('loadMoreImagesBtn');
+    if (loadMoreImagesBtn) {
+        loadMoreImagesBtn.addEventListener('click', () => {
+            visibleImagesCount += 16;
+            renderImagesTab(currentPhotosList);
+        });
+    }
+
     function renderImagesTab(photos) {
         const imagesGrid = document.getElementById('imagesGrid');
         if (!imagesGrid) return;
+        currentPhotosList = photos || [];
         imagesGrid.innerHTML = '';
         
-        photos.forEach(photo => {
+        const visiblePhotos = currentPhotosList.slice(0, visibleImagesCount);
+        
+        visiblePhotos.forEach(photo => {
             const div = document.createElement('div');
             div.style.cssText = 'background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s; position: relative;';
             div.onmouseover = () => div.style.transform = 'translateY(-4px)';
@@ -214,14 +238,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (photos.length === 0) {
             imagesGrid.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No images found.</p>';
         }
+
+        if (loadMoreImagesBtn) {
+            if (visibleImagesCount < currentPhotosList.length) {
+                loadMoreImagesBtn.style.display = 'inline-block';
+            } else {
+                loadMoreImagesBtn.style.display = 'none';
+            }
+        }
     }
 
     function renderUsersTab(usersList) {
         const usersGrid = document.getElementById('usersGrid');
         if (!usersGrid) return;
+        currentUsersList = usersList || [];
         usersGrid.innerHTML = '';
         
-        usersList.forEach(user => {
+        const visibleUsers = currentUsersList.slice(0, visibleUsersCount);
+        
+        visibleUsers.forEach(user => {
             const userName = user.id;
             const avatarSrc = user.avatar_url || `/gallery/${userName}/avatar.jpg`;
             const fallbackSrc = (user.photos && user.photos.length > 0) ? user.photos[0] : '';
@@ -287,7 +322,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (usersList.length === 0) {
             usersGrid.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No recognized users found.</p>';
         }
+
+        if (loadMoreUsersBtn) {
+            if (visibleUsersCount < currentUsersList.length) {
+                loadMoreUsersBtn.style.display = 'inline-block';
+            } else {
+                loadMoreUsersBtn.style.display = 'none';
+            }
+        }
     }
+
 
     function updateStats(photos, usersList) {
         const statImages = document.getElementById('statImages');

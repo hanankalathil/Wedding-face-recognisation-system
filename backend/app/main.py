@@ -4,12 +4,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from app.core.config import GALLERY_DIR
+import inspect
 from app.api import admin, recognize, download
-print(">>> IMPORTED ADMIN FROM:", admin.__file__)
-print(">>> ADMIN ROUTES:", [r.path for r in admin.router.routes if 'users' in r.path])
+print("=== GET_ALL_PHOTOS SOURCE IN MAIN ===")
+print(inspect.getsource(admin.get_all_photos))
+print("=====================================")
 from app.services.db_service import load_db
 
 app = FastAPI()
+
 
 
 @app.middleware("http")

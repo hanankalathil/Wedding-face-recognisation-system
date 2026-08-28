@@ -14,8 +14,9 @@ from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES
 from app.services.db_service import load_db, save_db, get_db
 from app.services.face_service import process_image_background
 
-# Admin API router module
+# Admin API router module - unique photos fix
 router = APIRouter()
+
 
 
 @router.get("/download-zip")
@@ -133,10 +134,15 @@ async def admin_upload_image(background_tasks: BackgroundTasks, file: UploadFile
 @router.get("/photos")
 async def get_all_photos():
     photos = []
+    seen_real_names = set()
     if os.path.exists(GALLERY_DIR):
         for root, _, files in os.walk(GALLERY_DIR):
             for file in files:
                 if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
+                    real_name = file.split('_', 1)[-1] if '_' in file else file
+                    if real_name in seen_real_names:
+                        continue
+                    seen_real_names.add(real_name)
                     rel_dir = os.path.relpath(root, GALLERY_DIR)
                     if rel_dir == ".":
                         rel_path = file
@@ -149,6 +155,9 @@ async def get_all_photos():
                     })
     photos.sort(key=lambda p: os.path.getmtime(os.path.join(GALLERY_DIR, p["path"])) if os.path.exists(os.path.join(GALLERY_DIR, p["path"])) else 0, reverse=True)
     return {"status": "success", "photos": photos}
+
+
+
 
 def _is_intentional_copy(photos_list):
     filenames = {p.get("filename") or os.path.basename(p.get("path", "")) for p in photos_list}
