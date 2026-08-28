@@ -206,16 +206,178 @@ def process_image_background(img, final_filename, original_name):
             dest_dir = os.path.join(GALLERY_DIR, person_id)
             os.makedirs(dest_dir, exist_ok=True)
             relative_path = f"{person_id}/{final_filename}"
+            file_path = os.path.join(GALLERY_DIR, relative_path)
+            cv2.imwrite(file_path, img)
             
-        file_path = os.path.join(GALLERY_DIR, relative_path)
-        cv2.imwrite(file_path, img)
-        
-        for pid in set(matched_person_ids):
             photo_url = f"/gallery/{relative_path}"
-            register_face(pid, db["persons"][pid]["representative_embedding"], photo_url)
+            register_face(person_id, db["persons"][person_id]["representative_embedding"], photo_url)
+        elif len(valid_faces) > 1:
+            # Save main image once into Group photo directory
+            group_file_path = os.path.join(group_photos_dir, final_filename)
+            cv2.imwrite(group_file_path, img)
+            group_photo_url = f"/gallery/Group photo/{final_filename}"
+            
+            # Register group photo URL for each matched person
+            for pid in set(matched_person_ids):
+                register_face(pid, db["persons"][pid]["representative_embedding"], group_photo_url)
                 
         save_db()
+
+        
+        # Generate cropped face avatar for matched persons
+        for pid in set(matched_person_ids):
+            try:
+                generate_avatar_for_person(pid)
+            except Exception:
+                pass
     except Exception as e:
         import traceback
         print(f"Error in background processing: {e}")
         traceback.print_exc()
+
+def sync_group_photos_to_personal_folders():
+    """
+    Retroactively syncs existing group photos into personal folders for all registered persons.
+    Copies physical files from 'Group photo/filename' into '{person_id}/filename' and updates database.
+    """
+    import shutil
+    try:
+        load_db()
+        db = get_db()
+        persons = db.get("persons", {})
+        if not persons:
+            return 0
+            
+        synced_count = 0
+        updated = False
+        
+        for pid, pdata in list(persons.items()):
+            photos = list(pdata.get("photos", []))
+            person_dir = os.path.join(GALLERY_DIR, pid)
+            
+            for photo_url in photos:
+                if "/gallery/Group photo/" in photo_url:
+                    filename = os.path.basename(photo_url)
+                    src_file = os.path.join(GALLERY_DIR, "Group photo", filename)
+                    
+                    if os.path.exists(src_file):
+                        os.makedirs(person_dir, exist_ok=True)
+                        dest_file = os.path.join(person_dir, filename)
+                        if not os.path.exists(dest_file):
+                            shutil.copy2(src_file, dest_file)
+                            synced_count += 1
+                        
+                        personal_photo_url = f"/gallery/{pid}/{filename}"
+                        if personal_photo_url not in pdata["photos"]:
+                            pdata["photos"].append(personal_photo_url)
+                            updated = True
+                            
+        if updated:
+            save_db()
+        print(f"Group photos sync complete: copied/verified {synced_count} file(s).")
+        return synced_count
+    except Exception as e:
+        import traceback
+        print(f"Error syncing group photos: {e}")
+        traceback.print_exc()
+        return 0
+
+def generate_avatar_for_person(person_id, force=False):
+    """
+    Generates a cropped face avatar image for the given person_id and saves it to
+    GALLERY_DIR/{person_id}/avatar.jpg.
+    Prioritizes single-person photos over group photos.
+    """
+    try:
+        person_dir = os.path.join(GALLERY_DIR, person_id)
+        os.makedirs(person_dir, exist_ok=True)
+        avatar_path = os.path.join(person_dir, "avatar.jpg")
+        
+        if os.path.exists(avatar_path) and not force:
+            return avatar_path
+            
+        load_db()
+        db = get_db()
+        pdata = db.get("persons", {}).get(person_id)
+        if not pdata or "representative_embedding" not in pdata:
+            return None
+            
+        rep_emb = np.array(pdata["representative_embedding"], dtype=np.float32)
+        photos = pdata.get("photos", [])
+        if not photos:
+            return None
+            
+        # Separate single photos from group photos
+        single_photos = [u for u in photos if not u.startswith("/gallery/Group photo/") and os.path.basename(u) != "avatar.jpg"]
+        group_photos = [u for u in photos if u.startswith("/gallery/Group photo/") and os.path.basename(u) != "avatar.jpg"]
+        
+        candidate_photos = single_photos + group_photos
+        
+        for photo_url in candidate_photos:
+            rel_path = photo_url.replace("/gallery/", "")
+            img_path = os.path.normpath(os.path.join(GALLERY_DIR, rel_path))
+            
+            if not os.path.exists(img_path):
+                continue
+                
+            img = cv2.imread(img_path)
+            if img is None:
+                continue
+                
+            faces = _analyzer.analyze(img)
+            if not faces:
+                continue
+                
+            best_face = None
+            max_sim = -1.0
+            
+            for f in faces:
+                if f.embedding is not None and getattr(f, "bbox", None) is not None:
+                    f_emb = np.array(f.embedding, dtype=np.float32)
+                    norm1 = np.linalg.norm(f_emb)
+                    norm2 = np.linalg.norm(rep_emb)
+                    if norm1 > 0 and norm2 > 0:
+                        sim = np.dot(f_emb, rep_emb) / (norm1 * norm2)
+                        if sim > max_sim:
+                            max_sim = sim
+                            best_face = f
+                            
+            if best_face is not None and max_sim >= 0.35:
+                h, w = img.shape[:2]
+                bbox = best_face.bbox
+                x1, y1, x2, y2 = [int(v) for v in bbox]
+                fw, fh = x2 - x1, y2 - y1
+                pad = int(max(fw, fh) * 0.45)
+                px1, py1 = max(0, x1 - pad), max(0, y1 - pad)
+                px2, py2 = min(w, x2 + pad), min(h, y2 + pad)
+                
+                crop = img[py1:py2, px1:px2]
+                if crop.size > 0:
+                    cv2.imwrite(avatar_path, crop)
+                    return avatar_path
+                    
+        return None
+    except Exception as e:
+        print(f"Error generating avatar for {person_id}: {e}")
+        return None
+
+def generate_avatars_for_all_persons(force=False):
+    """
+    Generates cropped face avatars for all registered persons in the database.
+    """
+    try:
+        load_db()
+        db = get_db()
+        persons = db.get("persons", {})
+        count = 0
+        for pid in list(persons.keys()):
+            res = generate_avatar_for_person(pid, force=force)
+            if res:
+                count += 1
+        print(f"Generated/verified cropped face avatars for {count} person(s).")
+        return count
+    except Exception as e:
+        print(f"Error generating avatars for all persons: {e}")
+        return 0
+
+

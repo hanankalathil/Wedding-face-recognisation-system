@@ -88,17 +88,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPhotosDataStr = '';
     async function fetchRealData(force = false) {
         try {
-            const response = await fetch(`/api/admin/photos`);
-            const data = await response.json();
-            if (data.status === 'success') {
-                const dataStr = JSON.stringify(data.photos);
+            const [photosRes, usersRes] = await Promise.all([
+                fetch(`/api/admin/photos`),
+                fetch(`/api/admin/all-users`)
+            ]);
+
+            const photosData = await photosRes.json();
+            const usersData = await usersRes.json();
+            
+            if (photosData.status === 'success') {
+                const galleryPhotos = photosData.photos.filter(p => p.filename !== 'avatar.jpg' && !p.path.endsWith('/avatar.jpg'));
+                const usersList = (usersData.status === 'success') ? usersData.users : [];
+                
+                const dataStr = JSON.stringify(galleryPhotos) + JSON.stringify(usersList);
                 if (!force && dataStr === lastPhotosDataStr) return; // Skip DOM update if no change
                 lastPhotosDataStr = dataStr;
                 
-                renderTable(data.photos);
-                renderImagesTab(data.photos);
-                renderUsersTab(data.photos);
-                updateStats(data.photos);
+                renderTable(galleryPhotos);
+                renderImagesTab(galleryPhotos);
+                renderUsersTab(usersList);
+                updateStats(galleryPhotos, usersList);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -106,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff6b6b; padding: 20px;">Failed to load data. Is the backend running?</td></tr>';
             }
         }
+
     }
 
     function renderTable(photos) {
@@ -206,28 +216,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderUsersTab(photos) {
+    function renderUsersTab(usersList) {
         const usersGrid = document.getElementById('usersGrid');
         if (!usersGrid) return;
         usersGrid.innerHTML = '';
         
-        const users = {};
-        photos.forEach(photo => {
-            const parts = photo.path.split('/');
-            if (parts.length > 1) {
-                const userDir = parts[0];
-                if (!users[userDir]) {
-                    users[userDir] = photo;
-                }
-            }
-        });
-        
-        Object.keys(users).forEach(userName => {
-            const photo = users[userName];
+        usersList.forEach(user => {
+            const userName = user.id;
+            const avatarSrc = user.avatar_url || `/gallery/${userName}/avatar.jpg`;
+            const fallbackSrc = (user.photos && user.photos.length > 0) ? user.photos[0] : '';
             const div = document.createElement('div');
             div.style.cssText = 'background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer;';
             div.addEventListener('click', () => {
-                openUserPhotosModal(userName, photos);
+                openUserPhotosModal(user);
             });
             div.innerHTML = `
                 <button class="rename-user-btn" style="position: absolute; top: 12px; right: 46px; background: rgba(26, 54, 93, 0.9); color: white; border: none; border-radius: 4px; padding: 6px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;" title="Rename User">
@@ -240,8 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
                 </button>
-                <img src="${photo.url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; border: 2px solid var(--primary-color);">
+                <img src="${avatarSrc}" onerror="this.onerror=null; this.src='${fallbackSrc}';" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid var(--primary-color);">
                 <h3 style="margin: 0; font-size: 1rem; color: var(--text-light); word-break: break-all;">${userName}</h3>
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">${user.photo_count} photo${user.photo_count === 1 ? '' : 's'}</span>
             `;
             const renameUserBtn = div.querySelector('.rename-user-btn');
             renameUserBtn.addEventListener('click', async (e) => {
@@ -282,26 +284,19 @@ document.addEventListener('DOMContentLoaded', () => {
             usersGrid.appendChild(div);
         });
         
-        if (Object.keys(users).length === 0) {
+        if (usersList.length === 0) {
             usersGrid.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No recognized users found.</p>';
         }
     }
 
-    function updateStats(photos) {
+    function updateStats(photos, usersList) {
         const statImages = document.getElementById('statImages');
         if (statImages) statImages.textContent = photos.length;
         
-        const uniqueUsers = new Set();
-        photos.forEach(photo => {
-            const parts = photo.path.split('/');
-            if (parts.length > 1 && parts[0] !== 'Group photo' && parts[0] !== 'unrecognized') {
-                uniqueUsers.add(parts[0]);
-            }
-        });
-        
         const statUsers = document.getElementById('statUsers');
-        if (statUsers) statUsers.textContent = uniqueUsers.size;
+        if (statUsers) statUsers.textContent = usersList ? usersList.length : 0;
     }
+
 
     // Initial render
     fetchRealData(true);
@@ -1245,17 +1240,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function openUserPhotosModal(userName, allPhotos) {
+    function openUserPhotosModal(userObjOrName, allPhotos = []) {
         if (!userPhotosModal || !userPhotosGrid) return;
         
+        const userName = (typeof userObjOrName === 'object' && userObjOrName !== null) ? userObjOrName.id : userObjOrName;
         userPhotosModalTitle.textContent = `${userName}'s Photos`;
         userPhotosGrid.innerHTML = '';
         
-        // Filter photos for this user
-        const userPhotos = allPhotos.filter(photo => {
-            const parts = photo.path.split('/');
-            return parts.length > 1 && parts[0] === userName;
-        });
+        let userPhotos = [];
+        if (typeof userObjOrName === 'object' && userObjOrName !== null && Array.isArray(userObjOrName.photos)) {
+            userPhotos = userObjOrName.photos.map(u => {
+                const fname = u.split('/').pop();
+                return {
+                    url: u,
+                    filename: fname,
+                    path: u.replace('/gallery/', '')
+                };
+            }).filter(p => p.filename !== 'avatar.jpg');
+        } else if (Array.isArray(allPhotos)) {
+            userPhotos = allPhotos.filter(photo => {
+                const parts = photo.path.split('/');
+                return parts.length > 1 && parts[0] === userName && photo.filename !== 'avatar.jpg' && !photo.path.endsWith('/avatar.jpg');
+            });
+        }
+
+
         
         if (userPhotos.length === 0) {
             userPhotosGrid.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1;">No images found for this user.</p>';

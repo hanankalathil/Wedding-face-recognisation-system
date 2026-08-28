@@ -14,7 +14,9 @@ from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES
 from app.services.db_service import load_db, save_db, get_db
 from app.services.face_service import process_image_background
 
+# Admin API router module
 router = APIRouter()
+
 
 @router.get("/download-zip")
 async def download_photos_zip(person_id: str = None, category: str = None):
@@ -23,17 +25,35 @@ async def download_photos_zip(person_id: str = None, category: str = None):
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             if person_id:
+                load_db()
+                db = get_db()
+                pdata = db.get("persons", {}).get(person_id, {})
+                photo_urls = pdata.get("photos", [])
+                written_files = set()
+                
+                for photo_url in photo_urls:
+                    fname = os.path.basename(photo_url)
+                    if fname == "avatar.jpg" or fname in written_files:
+                        continue
+                    rel_path = photo_url.replace("/gallery/", "")
+                    fp = os.path.normpath(os.path.join(GALLERY_DIR, rel_path))
+                    if os.path.exists(fp):
+                        zf.write(fp, arcname=f"{person_id}/{fname}")
+                        written_files.add(fname)
+                        
                 target_dir = os.path.join(GALLERY_DIR, person_id)
                 if os.path.exists(target_dir):
                     for file in os.listdir(target_dir):
-                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg" and file not in written_files:
                             fp = os.path.join(target_dir, file)
                             zf.write(fp, arcname=f"{person_id}/{file}")
+                            written_files.add(file)
+
             elif category:
                 target_dir = os.path.join(GALLERY_DIR, "couple_photos", category.lower())
                 if os.path.exists(target_dir):
                     for file in os.listdir(target_dir):
-                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
                             fp = os.path.join(target_dir, file)
                             zf.write(fp, arcname=f"{category}/{file}")
             else:
@@ -41,7 +61,7 @@ async def download_photos_zip(person_id: str = None, category: str = None):
                     if ".thumbnails" in root:
                         continue
                     for file in files:
-                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
                             fp = os.path.join(root, file)
                             rel = os.path.relpath(fp, GALLERY_DIR)
                             zf.write(fp, arcname=rel)
@@ -116,7 +136,7 @@ async def get_all_photos():
     if os.path.exists(GALLERY_DIR):
         for root, _, files in os.walk(GALLERY_DIR):
             for file in files:
-                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
                     rel_dir = os.path.relpath(root, GALLERY_DIR)
                     if rel_dir == ".":
                         rel_path = file
@@ -130,6 +150,10 @@ async def get_all_photos():
     photos.sort(key=lambda p: os.path.getmtime(os.path.join(GALLERY_DIR, p["path"])) if os.path.exists(os.path.join(GALLERY_DIR, p["path"])) else 0, reverse=True)
     return {"status": "success", "photos": photos}
 
+def _is_intentional_copy(photos_list):
+    filenames = {p.get("filename") or os.path.basename(p.get("path", "")) for p in photos_list}
+    return len(filenames) == 1
+
 @router.get("/photos/duplicates")
 async def find_duplicates():
     try:
@@ -137,7 +161,7 @@ async def find_duplicates():
         if os.path.exists(GALLERY_DIR):
             for root, _, files in os.walk(GALLERY_DIR):
                 for file in files:
-                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
                         file_path = os.path.join(root, file)
                         rel_dir = os.path.relpath(root, GALLERY_DIR)
                         if rel_dir == ".":
@@ -164,6 +188,8 @@ async def find_duplicates():
 
         for f_hash, photos_list in hash_groups.items():
             if len(photos_list) > 1:
+                if _is_intentional_copy(photos_list):
+                    continue
                 original = photos_list[0]
                 dups = photos_list[1:]
                 total_duplicates_count += len(dups)
@@ -196,7 +222,7 @@ async def delete_duplicates_bulk():
         if os.path.exists(GALLERY_DIR):
             for root, _, files in os.walk(GALLERY_DIR):
                 for file in files:
-                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) and file != "avatar.jpg":
                         file_path = os.path.join(root, file)
                         rel_dir = os.path.relpath(root, GALLERY_DIR)
                         if rel_dir == ".":
@@ -210,7 +236,8 @@ async def delete_duplicates_bulk():
                         photo_info = {
                             "file_path": file_path,
                             "rel_path": rel_path,
-                            "photo_url": f"/gallery/{rel_path.replace(os.sep, '/')}"
+                            "photo_url": f"/gallery/{rel_path.replace(os.sep, '/')}",
+                            "filename": file
                         }
                         
                         if file_hash not in hash_groups:
@@ -222,6 +249,8 @@ async def delete_duplicates_bulk():
 
         for f_hash, photos_list in hash_groups.items():
             if len(photos_list) > 1:
+                if _is_intentional_copy(photos_list):
+                    continue
                 for dup in photos_list[1:]:
                     try:
                         if os.path.exists(dup["file_path"]):
@@ -246,6 +275,71 @@ async def delete_duplicates_bulk():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/all-users")
+async def get_all_users():
+
+    try:
+        load_db()
+        db = get_db()
+        persons = db.get("persons", {})
+        users_list = []
+        
+        for pid, pdata in persons.items():
+            raw_photos = pdata.get("photos", [])
+            seen_filenames = set()
+            unique_photos = []
+            
+            for photo_url in raw_photos:
+                fname = os.path.basename(photo_url)
+                if fname == "avatar.jpg":
+                    continue
+                if fname not in seen_filenames:
+                    seen_filenames.add(fname)
+                    unique_photos.append(photo_url)
+                    
+            avatar_disk_path = os.path.join(GALLERY_DIR, pid, "avatar.jpg")
+            if os.path.exists(avatar_disk_path):
+                avatar_url = f"/gallery/{pid}/avatar.jpg"
+            elif unique_photos:
+                avatar_url = unique_photos[0]
+            else:
+                avatar_url = ""
+                
+            users_list.append({
+                "id": pid,
+                "avatar_url": avatar_url,
+                "photo_count": len(unique_photos),
+                "photos": unique_photos
+            })
+            
+        return {"status": "success", "users": users_list}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/users/generate-avatars")
+async def generate_avatars_endpoint():
+    try:
+        from app.services.face_service import generate_avatars_for_all_persons
+        count = generate_avatars_for_all_persons(force=True)
+        return {"status": "success", "message": f"Successfully generated avatars for {count} person(s).", "count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/photos/sync-group-photos")
+async def sync_group_photos_endpoint():
+    try:
+        from app.services.face_service import sync_group_photos_to_personal_folders
+        copied_count = sync_group_photos_to_personal_folders()
+        return {
+            "status": "success",
+            "message": f"Successfully synced group photos into personal folders. Copied/verified {copied_count} photo(s)."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/photos/delete")
 async def delete_photo(req: DeletePhotoRequest):

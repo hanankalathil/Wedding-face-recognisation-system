@@ -5,9 +5,12 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from app.core.config import GALLERY_DIR
 from app.api import admin, recognize, download
+print(">>> IMPORTED ADMIN FROM:", admin.__file__)
+print(">>> ADMIN ROUTES:", [r.path for r in admin.router.routes if 'users' in r.path])
 from app.services.db_service import load_db
 
 app = FastAPI()
+
 
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
@@ -40,6 +43,15 @@ async def startup_event():
         start_wifi_services()
     except Exception as e:
         print(f"Error starting WiFi services on startup: {e}")
+        
+    try:
+        from app.services.face_service import sync_group_photos_to_personal_folders, generate_avatars_for_all_persons
+        sync_group_photos_to_personal_folders()
+        generate_avatars_for_all_persons()
+    except Exception as e:
+        print(f"Error syncing group photos or avatars on startup: {e}")
+
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
