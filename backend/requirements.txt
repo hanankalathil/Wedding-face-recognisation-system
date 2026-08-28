@@ -5,3 +5,5 @@ uniface[cpu]
 opencv-python-headless
 numpy
 pyftpdlib
+supabase
+

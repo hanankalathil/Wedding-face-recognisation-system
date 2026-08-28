@@ -1,19 +1,15 @@
 import os
-from fastapi import FastAPI, Request
+import mimetypes
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
-from app.core.config import GALLERY_DIR
-import inspect
+from app.core.config import GALLERY_DIR, is_supabase_enabled
+from app.services.supabase_service import download_file_from_supabase
 from app.api import admin, recognize, download
-print("=== GET_ALL_PHOTOS SOURCE IN MAIN ===")
-print(inspect.getsource(admin.get_all_photos))
-print("=====================================")
 from app.services.db_service import load_db
 
 app = FastAPI()
-
-
 
 @app.middleware("http")
 async def add_no_cache_headers(request: Request, call_next):
@@ -33,9 +29,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure the gallery directory exists on startup so it can be mounted reliably
 os.makedirs(GALLERY_DIR, exist_ok=True)
-app.mount("/gallery", StaticFiles(directory=GALLERY_DIR), name="gallery")
+
+@app.get("/gallery/{file_path:path}")
+async def get_gallery_file(file_path: str):
+    local_path = os.path.normpath(os.path.join(GALLERY_DIR, file_path))
+    if os.path.exists(local_path) and os.path.isfile(local_path):
+        return FileResponse(local_path)
+        
+    if is_supabase_enabled():
+        raw_bytes = download_file_from_supabase(f"gallery/{file_path}")
+        if raw_bytes:
+            media_type = mimetypes.guess_type(file_path)[0] or "image/jpeg"
+            return Response(content=raw_bytes, media_type=media_type)
+            
+    raise HTTPException(status_code=404, detail="File not found")
 
 load_db()
 
@@ -53,8 +61,6 @@ async def startup_event():
         generate_avatars_for_all_persons()
     except Exception as e:
         print(f"Error syncing group photos or avatars on startup: {e}")
-
-
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -76,4 +82,3 @@ async def redirect_to_admin():
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-

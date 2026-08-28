@@ -6,7 +6,8 @@ from urllib.parse import unquote
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from app.core.config import GALLERY_DIR
+from app.core.config import GALLERY_DIR, is_supabase_enabled
+from app.services.supabase_service import download_file_from_supabase
 
 router = APIRouter()
 
@@ -22,11 +23,21 @@ async def download_image(path: str):
             
         file_path = os.path.normpath(os.path.join(GALLERY_DIR, decoded_path))
         
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File not found")
-            
-        filename = os.path.basename(file_path)
-        return FileResponse(path=file_path, filename=filename, media_type='image/jpeg', headers={"Content-Disposition": f"attachment; filename={filename}"})
+        if os.path.exists(file_path):
+            filename = os.path.basename(file_path)
+            return FileResponse(path=file_path, filename=filename, media_type='image/jpeg', headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+        if is_supabase_enabled():
+            raw_data = download_file_from_supabase(f"gallery/{decoded_path}")
+            if raw_data:
+                filename = os.path.basename(decoded_path)
+                return StreamingResponse(
+                    io.BytesIO(raw_data),
+                    media_type='image/jpeg',
+                    headers={"Content-Disposition": f"attachment; filename={filename}"}
+                )
+
+        raise HTTPException(status_code=404, detail="File not found")
     except HTTPException:
         raise
     except Exception as e:
@@ -51,8 +62,16 @@ async def download_zip(request: ZipRequest):
                     continue
                 
                 file_path = os.path.normpath(os.path.join(GALLERY_DIR, clean_path))
+                raw_bytes = None
+                
                 if os.path.exists(file_path):
-                    arcname = os.path.basename(file_path)
+                    with open(file_path, "rb") as f:
+                        raw_bytes = f.read()
+                elif is_supabase_enabled():
+                    raw_bytes = download_file_from_supabase(f"gallery/{clean_path}")
+
+                if raw_bytes:
+                    arcname = os.path.basename(clean_path)
                     # Handle duplicate filenames in the zip
                     original_arcname = arcname
                     counter = 1
@@ -60,7 +79,7 @@ async def download_zip(request: ZipRequest):
                         name, ext = os.path.splitext(original_arcname)
                         arcname = f"{name}_{counter}{ext}"
                         counter += 1
-                    zip_file.write(file_path, arcname=arcname)
+                    zip_file.writestr(arcname, raw_bytes)
                     
         zip_buffer.seek(0)
         return StreamingResponse(

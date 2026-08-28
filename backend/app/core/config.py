@@ -15,4 +15,12 @@ THRESHOLD = 0.45  # Optimal threshold for ArcFace ResNet-50
 
 COUPLE_PHOTO_CATEGORIES = ["Ceremony", "Reception", "Portraits", "Candid"]
 
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+SUPABASE_STORAGE_BUCKET = os.environ.get("SUPABASE_STORAGE_BUCKET", "wedding-gallery").strip()
+
+def is_supabase_enabled() -> bool:
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
 

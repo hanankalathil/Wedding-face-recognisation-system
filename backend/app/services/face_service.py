@@ -6,8 +6,9 @@ from uniface import FaceAnalyzer
 from uniface.detection import SCRFD
 from uniface.recognition import ArcFace
 from uniface.constants import SCRFDWeights, ArcFaceWeights
-from app.core.config import GALLERY_DIR, THRESHOLD
+from app.core.config import GALLERY_DIR, THRESHOLD, is_supabase_enabled
 from app.services.db_service import get_db, load_db, save_db
+from app.services.supabase_service import upload_file_to_supabase, download_file_from_supabase
 
 # Initialize high-accuracy SCRFD detector (10G with keypoints) and ResNet ArcFace recognizer
 detector = SCRFD(
@@ -159,7 +160,10 @@ def process_image_background(img, final_filename, original_name):
             dest_dir = unrecognized_dir
             relative_path = f"unrecognized/{final_filename}"
             file_path = os.path.join(GALLERY_DIR, relative_path)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             cv2.imwrite(file_path, img)
+            if is_supabase_enabled():
+                upload_file_to_supabase(file_path, f"gallery/{relative_path}")
             return
             
         if len(valid_faces) > 1:
@@ -208,13 +212,18 @@ def process_image_background(img, final_filename, original_name):
             relative_path = f"{person_id}/{final_filename}"
             file_path = os.path.join(GALLERY_DIR, relative_path)
             cv2.imwrite(file_path, img)
+            if is_supabase_enabled():
+                upload_file_to_supabase(file_path, f"gallery/{relative_path}")
             
             photo_url = f"/gallery/{relative_path}"
             register_face(person_id, db["persons"][person_id]["representative_embedding"], photo_url)
         elif len(valid_faces) > 1:
             # Save main image once into Group photo directory
+            os.makedirs(group_photos_dir, exist_ok=True)
             group_file_path = os.path.join(group_photos_dir, final_filename)
             cv2.imwrite(group_file_path, img)
+            if is_supabase_enabled():
+                upload_file_to_supabase(group_file_path, f"gallery/Group photo/{final_filename}")
             group_photo_url = f"/gallery/Group photo/{final_filename}"
             
             # Register group photo URL for each matched person
@@ -223,7 +232,6 @@ def process_image_background(img, final_filename, original_name):
                 
         save_db()
 
-        
         # Generate cropped face avatar for matched persons
         for pid in set(matched_person_ids):
             try:
@@ -260,11 +268,21 @@ def sync_group_photos_to_personal_folders():
                     filename = os.path.basename(photo_url)
                     src_file = os.path.join(GALLERY_DIR, "Group photo", filename)
                     
+                    if not os.path.exists(src_file) and is_supabase_enabled():
+                        # Download src_file from Supabase Storage if missing locally
+                        raw_data = download_file_from_supabase(f"gallery/Group photo/{filename}")
+                        if raw_data:
+                            os.makedirs(os.path.dirname(src_file), exist_ok=True)
+                            with open(src_file, "wb") as f:
+                                f.write(raw_data)
+
                     if os.path.exists(src_file):
                         os.makedirs(person_dir, exist_ok=True)
                         dest_file = os.path.join(person_dir, filename)
                         if not os.path.exists(dest_file):
                             shutil.copy2(src_file, dest_file)
+                            if is_supabase_enabled():
+                                upload_file_to_supabase(dest_file, f"gallery/{pid}/{filename}")
                             synced_count += 1
                         
                         personal_photo_url = f"/gallery/{pid}/{filename}"
@@ -317,6 +335,13 @@ def generate_avatar_for_person(person_id, force=False):
             rel_path = photo_url.replace("/gallery/", "")
             img_path = os.path.normpath(os.path.join(GALLERY_DIR, rel_path))
             
+            if not os.path.exists(img_path) and is_supabase_enabled():
+                raw_bytes = download_file_from_supabase(f"gallery/{rel_path}")
+                if raw_bytes:
+                    os.makedirs(os.path.dirname(img_path), exist_ok=True)
+                    with open(img_path, "wb") as f:
+                        f.write(raw_bytes)
+
             if not os.path.exists(img_path):
                 continue
                 
@@ -354,6 +379,8 @@ def generate_avatar_for_person(person_id, force=False):
                 crop = img[py1:py2, px1:px2]
                 if crop.size > 0:
                     cv2.imwrite(avatar_path, crop)
+                    if is_supabase_enabled():
+                        upload_file_to_supabase(avatar_path, f"gallery/{person_id}/avatar.jpg")
                     return avatar_path
                     
         return None
@@ -379,5 +406,3 @@ def generate_avatars_for_all_persons(force=False):
     except Exception as e:
         print(f"Error generating avatars for all persons: {e}")
         return 0
-
-

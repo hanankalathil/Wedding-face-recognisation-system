@@ -10,9 +10,15 @@ import numpy as np
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
-from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES
+from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES, is_supabase_enabled
 from app.services.db_service import load_db, save_db, get_db
 from app.services.face_service import process_image_background
+from app.services.supabase_service import (
+    upload_file_to_supabase,
+    delete_file_from_supabase,
+    download_file_from_supabase,
+)
+
 
 # Admin API router module - unique photos fix
 router = APIRouter()
@@ -38,9 +44,16 @@ async def download_photos_zip(person_id: str = None, category: str = None):
                         continue
                     rel_path = photo_url.replace("/gallery/", "")
                     fp = os.path.normpath(os.path.join(GALLERY_DIR, rel_path))
+                    if not os.path.exists(fp) and is_supabase_enabled():
+                        data = download_file_from_supabase(f"gallery/{rel_path}")
+                        if data:
+                            os.makedirs(os.path.dirname(fp), exist_ok=True)
+                            with open(fp, "wb") as f:
+                                f.write(data)
                     if os.path.exists(fp):
                         zf.write(fp, arcname=f"{person_id}/{fname}")
                         written_files.add(fname)
+
                         
                 target_dir = os.path.join(GALLERY_DIR, person_id)
                 if os.path.exists(target_dir):
@@ -359,6 +372,9 @@ async def delete_photo(req: DeletePhotoRequest):
              
         if os.path.exists(file_path):
             os.remove(file_path)
+
+        if is_supabase_enabled():
+            delete_file_from_supabase(f"gallery/{req.path.replace(os.sep, '/')}")
             
         load_db()
         db = get_db()
@@ -386,7 +402,12 @@ async def delete_user(req: DeleteUserRequest):
         load_db()
         db = get_db()
         if user_id in db.get("persons", {}):
-            del db["persons"][user_id]
+            pdata = db["persons"].pop(user_id)
+            if is_supabase_enabled():
+                for purl in pdata.get("photos", []):
+                    rel = purl.replace("/gallery/", "")
+                    delete_file_from_supabase(f"gallery/{rel}")
+                delete_file_from_supabase(f"gallery/{user_id}/avatar.jpg")
         save_db()
         
         return {"status": "success", "message": f"User {user_id} deleted successfully"}
@@ -429,6 +450,9 @@ async def upload_couple_photo(file: UploadFile = File(...), category: str = Form
         rel_path = f"couple_photos/{normalized_cat}/{filename}"
         photo_url = f"/gallery/{rel_path}"
 
+        if is_supabase_enabled():
+            upload_file_to_supabase(file_path, f"gallery/{rel_path}")
+
         load_db()
         db = get_db()
         if "couple_photos" not in db:
@@ -458,12 +482,12 @@ async def get_couple_photos():
     load_db()
     db = get_db()
     photos = db.get("couple_photos", [])
-    # Filter to only return photos that exist on disk
+    # Filter to only return photos that exist on disk or Supabase
     existing_photos = []
     updated = False
     for p in photos:
         disk_path = os.path.join(GALLERY_DIR, p["path"])
-        if os.path.exists(disk_path):
+        if os.path.exists(disk_path) or is_supabase_enabled():
             existing_photos.append(p)
         else:
             updated = True
@@ -484,6 +508,9 @@ async def delete_couple_photo(req: DeletePhotoRequest):
         if os.path.exists(file_path):
             os.remove(file_path)
 
+        if is_supabase_enabled():
+            delete_file_from_supabase(f"gallery/{req.path.replace(os.sep, '/')}")
+
         load_db()
         db = get_db()
         if "couple_photos" in db:
@@ -493,6 +520,7 @@ async def delete_couple_photo(req: DeletePhotoRequest):
         return {"status": "success", "message": "Couple photo deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/categories")
 async def get_categories():
