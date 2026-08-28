@@ -1,12 +1,11 @@
 services:
   - type: web
     name: wedding-face-recognition-system
-    env: python
+    env: docker
     plan: free
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python backend/run.py
     envVars:
       - key: PYTHONPATH
         value: backend
       - key: DEV
-        value: false
+        value: "false"
+
