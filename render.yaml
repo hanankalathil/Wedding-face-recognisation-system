@@ -1,7 +1,7 @@
 services:
   - type: web
     name: wedding-face-recognition-system
-    runtime: python
+    env: python
     plan: free
     buildCommand: pip install -r backend/requirements.txt
     startCommand: python backend/run.py
