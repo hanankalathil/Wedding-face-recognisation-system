@@ -564,7 +564,18 @@ document.addEventListener('DOMContentLoaded', () => {
             badge.id = 'floating-upload-badge';
             badge.className = 'floating-upload-badge';
             badge.innerHTML = `
-                <div class="floating-badge-spinner"></div>
+                <div class="floating-badge-spinner-container">
+                    <svg class="floating-badge-svg" viewBox="0 0 36 36">
+                        <defs>
+                            <linearGradient id="floating-badge-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#C5A880" />
+                                <stop offset="100%" stop-color="#fbbf24" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="floating-badge-circle-bg" cx="18" cy="18" r="14"></circle>
+                        <circle class="floating-badge-circle-bar" id="floating-badge-progress-ring" cx="18" cy="18" r="14"></circle>
+                    </svg>
+                </div>
                 <span class="floating-badge-text" id="floating-badge-text">Uploading...</span>
                 <span class="floating-badge-expand">View Progress</span>
             `;
@@ -650,6 +661,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ring = document.getElementById('loader-progress-ring');
         if (ring) ring.style.strokeDashoffset = '263.89';
 
+        const floatingRing = document.getElementById('floating-badge-progress-ring');
+        if (floatingRing) floatingRing.style.strokeDashoffset = '87.96';
+
         const metrics = document.getElementById('loader-speed-metrics');
         if (metrics) metrics.innerText = `⚡ 0.0 MB/s  •  0/${totalFiles}`;
 
@@ -695,10 +709,16 @@ document.addEventListener('DOMContentLoaded', () => {
             metricsElement.innerText = `⚡ ${speedMBs.toFixed(1)} MB/s  •  ${completedCount}/${totalFiles}`;
         }
 
-        // Update floating background badge text
+        // Update floating background badge ring & text
         const badgeText = document.getElementById('floating-badge-text');
         if (badgeText) {
             badgeText.innerText = `Uploading (${roundedPercent}%) • ${completedCount}/${totalFiles}`;
+        }
+        const floatingRing = document.getElementById('floating-badge-progress-ring');
+        if (floatingRing) {
+            const circumference = 87.96;
+            const offset = circumference - (roundedPercent / 100) * circumference;
+            floatingRing.style.strokeDashoffset = `${offset}`;
         }
     }
 

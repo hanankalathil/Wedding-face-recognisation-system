@@ -475,17 +475,36 @@
 .results-section {
     display: none;
     padding-top: 120px;
-    background: linear-gradient(180deg, #0f0f0f 0%, var(--color-bg-light) 15%);
+    padding-bottom: 80px;
+    background: var(--color-bg-light);
 }
 
 .results-section .section-title {
-    color: var(--color-text);
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.results-section .section-subtitle {
+    color: var(--color-text-light);
+}
+
+.results-section .btn-secondary {
+    background-color: var(--color-white);
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    box-shadow: 0 4px 15px rgba(26, 54, 93, 0.08);
+}
+
+.results-section .btn-secondary:hover {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    box-shadow: 0 6px 20px rgba(26, 54, 93, 0.2);
 }
 
 .results-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    gap: 24px;
     margin-top: 40px;
 }
 
@@ -493,18 +512,18 @@
     border-radius: 16px;
     overflow: hidden;
     position: relative;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    background: var(--color-white);
+    border: 1px solid rgba(26, 54, 93, 0.08);
+    box-shadow: 0 6px 24px rgba(26, 54, 93, 0.06);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .result-card.loading {
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.03) 25%,
-        rgba(255, 255, 255, 0.09) 37%,
-        rgba(255, 255, 255, 0.03) 63%
+        rgba(26, 54, 93, 0.04) 25%,
+        rgba(26, 54, 93, 0.08) 37%,
+        rgba(26, 54, 93, 0.04) 63%
     );
     background-size: 400% 100%;
     animation: shimmer 1.4s ease infinite;
@@ -519,8 +538,8 @@
     transform: translate(-50%, -50%);
     width: 36px;
     height: 36px;
-    border: 3px solid rgba(255, 255, 255, 0.08);
-    border-top-color: #C5A880; /* Theme Gold */
+    border: 3px solid rgba(26, 54, 93, 0.1);
+    border-top-color: var(--color-primary);
     border-radius: 50%;
     animation: card-spin 0.8s linear infinite;
     z-index: 2;
@@ -537,8 +556,8 @@
 }
 
 .result-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(26, 54, 93, 0.14);
 }
 
 .result-img {

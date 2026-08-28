@@ -1326,13 +1326,37 @@ body {
     transform: translateY(-3px) scale(1.02);
 }
 
-.floating-badge-spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid transparent;
-    border-top-color: var(--secondary);
-    border-radius: 50%;
-    animation: loader-spin 1s linear infinite;
+.floating-badge-spinner-container {
+    width: 22px;
+    height: 22px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.floating-badge-svg {
+    width: 22px;
+    height: 22px;
+    transform: rotate(-90deg);
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.3));
+}
+
+.floating-badge-circle-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 3.5;
+}
+
+.floating-badge-circle-bar {
+    fill: none;
+    stroke: url(#floating-badge-gradient);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    stroke-dasharray: 87.96;
+    stroke-dashoffset: 87.96;
+    transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .floating-badge-text {
