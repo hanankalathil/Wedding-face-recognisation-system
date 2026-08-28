@@ -2,6 +2,6 @@ fastapi
 uvicorn[standard]
 python-multipart
 uniface[cpu]
-opencv-python
+opencv-python-headless
 numpy
 pyftpdlib
