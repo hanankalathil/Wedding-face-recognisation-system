@@ -45,6 +45,11 @@ async def get_gallery_file(file_path: str):
             
     raise HTTPException(status_code=404, detail="File not found")
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
 load_db()
 
 @app.on_event("startup")
