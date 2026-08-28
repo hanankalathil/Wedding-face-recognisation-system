@@ -23,3 +23,7 @@ backend/data/wifi_imports/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+

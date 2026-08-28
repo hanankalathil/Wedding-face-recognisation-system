@@ -2,17 +2,59 @@ import os
 import uuid
 import shutil
 import hashlib
+import zipfile
+import io
 from datetime import datetime
 import cv2
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES
 from app.services.db_service import load_db, save_db, get_db
 from app.services.face_service import process_image_background
 
-
 router = APIRouter()
+
+@router.get("/download-zip")
+async def download_photos_zip(person_id: str = None, category: str = None):
+    """Generates and streams a ZIP file of gallery photos."""
+    try:
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if person_id:
+                target_dir = os.path.join(GALLERY_DIR, person_id)
+                if os.path.exists(target_dir):
+                    for file in os.listdir(target_dir):
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                            fp = os.path.join(target_dir, file)
+                            zf.write(fp, arcname=f"{person_id}/{file}")
+            elif category:
+                target_dir = os.path.join(GALLERY_DIR, "couple_photos", category.lower())
+                if os.path.exists(target_dir):
+                    for file in os.listdir(target_dir):
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                            fp = os.path.join(target_dir, file)
+                            zf.write(fp, arcname=f"{category}/{file}")
+            else:
+                for root, _, files in os.walk(GALLERY_DIR):
+                    if ".thumbnails" in root:
+                        continue
+                    for file in files:
+                        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                            fp = os.path.join(root, file)
+                            rel = os.path.relpath(fp, GALLERY_DIR)
+                            zf.write(fp, arcname=rel)
+
+        memory_file.seek(0)
+        zip_name = f"wedding_photos_{person_id or category or 'all'}.zip"
+        return StreamingResponse(
+            memory_file,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={zip_name}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class DeletePhotoRequest(BaseModel):
     path: str
@@ -91,8 +133,7 @@ async def get_all_photos():
 @router.get("/photos/duplicates")
 async def find_duplicates():
     try:
-        hashes = {}
-        duplicates = []
+        hash_groups = {}
         if os.path.exists(GALLERY_DIR):
             for root, _, files in os.walk(GALLERY_DIR):
                 for file in files:
@@ -113,15 +154,96 @@ async def find_duplicates():
                             "path": rel_path
                         }
                         
-                        if file_hash in hashes:
-                            duplicates.append({
-                                "original": hashes[file_hash],
-                                "duplicate": photo_info
-                            })
-                        else:
-                            hashes[file_hash] = photo_info
+                        if file_hash not in hash_groups:
+                            hash_groups[file_hash] = []
+                        hash_groups[file_hash].append(photo_info)
+
+        duplicates = []
+        groups = []
+        total_duplicates_count = 0
+
+        for f_hash, photos_list in hash_groups.items():
+            if len(photos_list) > 1:
+                original = photos_list[0]
+                dups = photos_list[1:]
+                total_duplicates_count += len(dups)
+                
+                groups.append({
+                    "original": original,
+                    "duplicates": dups,
+                    "total_copies": len(photos_list)
+                })
+
+                for dup in dups:
+                    duplicates.append({
+                        "original": original,
+                        "duplicate": dup
+                    })
                             
-        return {"status": "success", "duplicates": duplicates}
+        return {
+            "status": "success", 
+            "duplicates": duplicates,
+            "groups": groups,
+            "total_duplicates_count": total_duplicates_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/photos/delete-duplicates-bulk")
+async def delete_duplicates_bulk():
+    try:
+        hash_groups = {}
+        if os.path.exists(GALLERY_DIR):
+            for root, _, files in os.walk(GALLERY_DIR):
+                for file in files:
+                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                        file_path = os.path.join(root, file)
+                        rel_dir = os.path.relpath(root, GALLERY_DIR)
+                        if rel_dir == ".":
+                            rel_path = file
+                        else:
+                            rel_path = f"{rel_dir}/{file}".replace("\\", "/")
+                        
+                        with open(file_path, 'rb') as f:
+                            file_hash = hashlib.md5(f.read()).hexdigest()
+                            
+                        photo_info = {
+                            "file_path": file_path,
+                            "rel_path": rel_path,
+                            "photo_url": f"/gallery/{rel_path.replace(os.sep, '/')}"
+                        }
+                        
+                        if file_hash not in hash_groups:
+                            hash_groups[file_hash] = []
+                        hash_groups[file_hash].append(photo_info)
+
+        deleted_paths = []
+        deleted_urls = []
+
+        for f_hash, photos_list in hash_groups.items():
+            if len(photos_list) > 1:
+                for dup in photos_list[1:]:
+                    try:
+                        if os.path.exists(dup["file_path"]):
+                            os.remove(dup["file_path"])
+                            deleted_paths.append(dup["rel_path"])
+                            deleted_urls.append(dup["photo_url"])
+                    except Exception as err:
+                        print(f"Error deleting file {dup['file_path']}: {err}")
+
+        if deleted_urls:
+            load_db()
+            db = get_db()
+            for pid, pdata in list(db.get("persons", {}).items()):
+                pdata["photos"] = [u for u in pdata.get("photos", []) if u not in deleted_urls]
+            save_db()
+
+        return {
+            "status": "success",
+            "message": f"Successfully deleted {len(deleted_paths)} duplicate photos.",
+            "deleted_count": len(deleted_paths),
+            "deleted_paths": deleted_paths
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -584,3 +706,49 @@ async def rename_user(req: RenameUserRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/reset-system")
+async def reset_system_for_new_wedding():
+    """Deletes ALL photos, face data, and database to prepare for a new wedding."""
+    try:
+        from app.services.db_service import DB_DATA, DB_LOCK, save_db
+
+        # 1. Delete entire gallery directory (all photos + thumbnails)
+        if os.path.exists(GALLERY_DIR):
+            shutil.rmtree(GALLERY_DIR)
+        os.makedirs(GALLERY_DIR, exist_ok=True)
+
+        # 2. Reset the in-memory database
+        with DB_LOCK:
+            DB_DATA.clear()
+            DB_DATA["persons"] = {}
+            DB_DATA["couple_categories"] = list(COUPLE_PHOTO_CATEGORIES)
+            DB_DATA["couple_settings"] = {"couple_name": ""}
+
+        # 3. Save empty database to disk
+        save_db()
+
+        # 4. Clear embedding cache if it exists
+        try:
+            from app.services.face_service import get_embedding_cache
+            cache = get_embedding_cache()
+            if hasattr(cache, 'clear'):
+                cache.clear()
+        except Exception:
+            pass
+
+        # 5. Remove any leftover data files
+        data_dir = os.path.dirname(GALLERY_DIR)
+        for fname in os.listdir(data_dir):
+            fpath = os.path.join(data_dir, fname)
+            if fname.endswith('.pkl') or fname.endswith('.cache'):
+                try:
+                    os.remove(fpath)
+                except Exception:
+                    pass
+
+        return {
+            "status": "success",
+            "message": "System has been completely reset. Ready for a new wedding!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")

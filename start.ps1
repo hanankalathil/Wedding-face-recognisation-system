@@ -103,6 +103,7 @@ try {
     
     $backendProcess = Start-Process -FilePath "$PSScriptRoot\venv\Scripts\python.exe" `
         -ArgumentList "backend\run.py" `
+        -WorkingDirectory "$PSScriptRoot" `
         -WindowStyle Hidden `
         -PassThru `
         -RedirectStandardOutput "$PSScriptRoot\backend_out.log" `
