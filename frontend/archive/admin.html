@@ -593,13 +593,24 @@
                 <div id="qrCard" style="background: white; color: #1e293b; border-radius: 16px; padding: 24px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                     <h3 style="font-size: 1.3rem; margin-bottom: 4px; font-family: serif; color: #0f172a;">Sophia & James</h3>
                     <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">Scan to Find Your Photos</p>
-                    <img id="qrCodeImg" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=http://127.0.0.1:8000/find-my-photos.html" style="width: 180px; height: 180px; border-radius: 8px;">
+                    <img id="qrCodeImg" src="" style="width: 180px; height: 180px; border-radius: 8px;">
                     <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 12px; font-weight: 500;">Powered by Wedding AI Platform</p>
                 </div>
                 <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
                     <button class="btn-primary" onclick="window.print()">🖨️ Print Table Card</button>
-                    <a id="downloadQrLink" href="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=http://127.0.0.1:8000/find-my-photos.html" download="wedding_table_qr.png" class="btn-secondary" style="text-decoration:none; padding:10px 20px; border-radius:8px;">⬇️ Save QR Image</a>
+                    <a id="downloadQrLink" href="" download="wedding_table_qr.png" class="btn-secondary" style="text-decoration:none; padding:10px 20px; border-radius:8px;">⬇️ Save QR Image</a>
                 </div>
+                <script>
+                    (function() {
+                        const targetUrl = window.location.origin + '/index.html';
+                        const qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(targetUrl);
+                        const img = document.getElementById('qrCodeImg');
+                        const link = document.getElementById('downloadQrLink');
+                        if (img) img.src = qrSrc;
+                        if (link) link.href = qrSrc;
+                    })();
+                </script>
+
             </div>
         </div>
     </div>

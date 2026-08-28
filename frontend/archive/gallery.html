@@ -415,10 +415,11 @@
                     formData.append('file', blob, 'selfie.jpg');
 
                     // POST to api
-                    fetch('http://localhost:8000/api/recognize', {
+                    fetch('/api/recognize', {
                         method: 'POST',
                         body: formData
                     })
+
                     .then(res => res.json())
                     .then(data => {
                         sessionStorage.removeItem('pendingSelfie');
@@ -469,10 +470,11 @@
                     
                     let finalUrl = photoUrl;
                     if (finalUrl.startsWith('/')) {
-                        finalUrl = 'http://localhost:8000' + finalUrl;
+                        finalUrl = window.location.origin + finalUrl;
                     } else if (!finalUrl.startsWith('http')) {
-                        finalUrl = 'http://localhost:8000/' + finalUrl; 
+                        finalUrl = window.location.origin + '/' + finalUrl; 
                     }
+
 
                     img.src = finalUrl;
                     img.addEventListener('click', () => openModal(finalUrl));
@@ -541,10 +543,11 @@
                 for (let i = 0; i < currentMatches.length; i++) {
                     let finalUrl = currentMatches[i];
                     if (finalUrl.startsWith('/')) {
-                        finalUrl = 'http://localhost:8000' + finalUrl;
+                        finalUrl = window.location.origin + finalUrl;
                     } else if (!finalUrl.startsWith('http')) {
-                        finalUrl = 'http://localhost:8000/' + finalUrl;
+                        finalUrl = window.location.origin + '/' + finalUrl;
                     }
+
                     
                     try {
                         const response = await fetch(finalUrl);

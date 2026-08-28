@@ -30,9 +30,12 @@ USER user
 # Set environment variables
 ENV PYTHONPATH=/code/backend
 ENV DEV=false
+ENV PORT=10000
+ENV HOST=0.0.0.0
 
-# Expose port 8080 (standard container port)
-EXPOSE 8080
+# Expose port 10000 (Render web service default port)
+EXPOSE 10000
 
 # Run the unified server
 CMD ["python", "backend/run.py"]
+

@@ -1,13 +1,13 @@
 services:
   - type: web
     name: wedding-face-recognition-system
-    runtime: docker
-    repo: https://github.com/hanankalathil/Wedding-face-recognisation-system
+    env: docker
     plan: free
     envVars:
       - key: PYTHONPATH
         value: backend
       - key: DEV
         value: "false"
+
 
 
