@@ -1,13 +1,14 @@
 services:
   - type: web
     name: wedding-face-recognition-system
-    env: docker
+    runtime: docker
     plan: free
     envVars:
       - key: PYTHONPATH
         value: backend
       - key: DEV
         value: "false"
+
 
 
 
