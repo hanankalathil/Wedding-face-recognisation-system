@@ -24,9 +24,14 @@ backend/data/wifi_imports/
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
+# Binaries & Tunnel Executables
+cloudflared.exe
+ngrok.exe
+*.exe
+cli/
 
+# Backup directory
 backup/
+
 
 
