@@ -1,28 +1,28 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index.py"
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/gallery/:path*",
-      "destination": "/api/index.py"
+      "src": "/gallery/(.*)",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/health",
-      "destination": "/api/index.py"
+      "src": "/health",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/admin",
-      "destination": "/api/index.py"
+      "src": "/admin",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/",
-      "destination": "/frontend/index.html"
+      "src": "/frontend/(.*)",
+      "dest": "/frontend/$1"
     },
     {
-      "source": "/:path*",
-      "destination": "/frontend/:path*"
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
     }
   ]
 }
