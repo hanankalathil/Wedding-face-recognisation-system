@@ -2,7 +2,13 @@ import os
 
 # Base directory for backend (backend/)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-default_data_dir = os.path.join(BASE_DIR, "data")
+# Set up Vercel serverless writable directory defaults if running on Vercel
+is_vercel = os.environ.get("VERCEL") == "1"
+if is_vercel:
+    os.environ.setdefault("HOME", "/tmp")
+    os.environ.setdefault("UNIFACE_HOME", "/tmp/.uniface")
+
+default_data_dir = "/tmp/data" if is_vercel else os.path.join(BASE_DIR, "data")
 
 # Allow overriding data directory via environment variable (e.g., for Render persistent disk)
 DATA_DIR = os.environ.get("DATA_DIR", default_data_dir)
