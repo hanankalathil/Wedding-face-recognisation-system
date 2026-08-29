@@ -25,10 +25,47 @@ function Draw-CyberBanner {
     Write-Host ""
 }
 
+# Initial Storage System Prompt on Launch
+Draw-CyberBanner
+Write-Host "$C_GREEN+--[ STEP 1: SELECT STORAGE SYSTEM ]-----------------------------------+$C_RESET"
+Write-Host "$C_GREEN|                                                                      |$C_RESET"
+Write-Host "$C_GREEN|  $C_YELLOW[01] LOCAL DISK MODE      $C_WHITE-- Fast Local Windows Storage (Offline) $C_GREEN|$C_RESET"
+Write-Host "$C_GREEN|  $C_GREEN[02] SUPABASE CLOUD MODE  $C_WHITE-- Cloud Database & Bucket Sync       $C_GREEN|$C_RESET"
+Write-Host "$C_GREEN|                                                                      |$C_RESET"
+Write-Host "$C_GREEN+----------------------------------------------------------------------+$C_RESET"
+Write-Host ""
+$initialStorageChoice = Read-Host " $C_CYAN> SELECT STORAGE MODE CHOICE [1 or 2] (default=1)$C_RESET "
+if ($initialStorageChoice -eq "2") {
+    $newMode = "supabase"
+} else {
+    $newMode = "local"
+}
+
+$envFile = "$PSScriptRoot\.env"
+if (Test-Path $envFile) {
+    $lines = Get-Content $envFile | Where-Object { $_ -notmatch "^STORAGE_MODE=" }
+    $lines += "STORAGE_MODE=$newMode"
+    Set-Content -Path $envFile -Value $lines
+} else {
+    Set-Content -Path $envFile -Value "STORAGE_MODE=$newMode"
+}
+
+Write-Host ""
+Write-Host "  $C_GREEN[OK] STORAGE SYSTEM SET TO: $($newMode.ToUpper())$C_RESET"
+Start-Sleep -Seconds 1
+
 $mainLoop = $true
 
 while ($mainLoop) {
+    $activeStorageMode = "LOCAL"
+    if (Test-Path $envFile) {
+        $modeLine = Get-Content $envFile | Where-Object { $_ -match "^STORAGE_MODE=" }
+        if ($modeLine -match "supabase") { $activeStorageMode = "SUPABASE" }
+    }
+
     Draw-CyberBanner
+    Write-Host "$C_YELLOW  >>> ACTIVE STORAGE MODE: $activeStorageMode <<< $C_RESET"
+    Write-Host ""
 
     Write-Host "$C_GREEN+--[ SELECT DEPLOYMENT MODE ]------------------------------------------+$C_RESET"
     Write-Host "$C_GREEN|                                                                      |$C_RESET"
@@ -38,17 +75,45 @@ while ($mainLoop) {
     Write-Host "$C_GREEN|  $C_CYAN[04] ADMIN DASHBOARD      $C_WHITE-- Full Control Center (http://localhost:8000/admin)$C_GREEN|$C_RESET"
     Write-Host "$C_GREEN|  $C_YELLOW[05] WI-FI BROADCAST      $C_WHITE-- Local Network Share (http://<LAN_IP>:8000) $C_GREEN|$C_RESET"
     Write-Host "$C_GREEN|  $C_MAGENTA[06] SYSTEM MAINTENANCE    $C_WHITE-- Vector DB Sync and Avatar Crop Utility    $C_GREEN|$C_RESET"
-    Write-Host "$C_GREEN|  $C_RED[07] EXIT SYSTEM         $C_WHITE-- Close Active Processes and Shutdown Matrix$C_GREEN|$C_RESET"
+    Write-Host "$C_GREEN|  $C_CYAN[07] TOGGLE STORAGE MODE  $C_WHITE-- Switch between LOCAL and SUPABASE storage $C_GREEN|$C_RESET"
+    Write-Host "$C_GREEN|  $C_RED[08] EXIT SYSTEM         $C_WHITE-- Close Active Processes and Shutdown Matrix$C_GREEN|$C_RESET"
     Write-Host "$C_GREEN|                                                                      |$C_RESET"
     Write-Host "$C_GREEN+----------------------------------------------------------------------+$C_RESET"
     Write-Host ""
 
-    $choice = Read-Host " $C_CYAN> ENTER MATRIX MODE CHOICE [1 - 7] (default=1)$C_RESET "
-    if ($choice -eq "7") {
+    $choice = Read-Host " $C_CYAN> ENTER MATRIX MODE CHOICE [1 - 8] (default=1)$C_RESET "
+    if ($choice -eq "8") {
         Write-Host "$C_YELLOW[!] SHUTTING DOWN RECON MATRIX SYSTEM...$C_RESET"
         break
     }
-    if ($choice -notmatch '^[1-7]$') {
+    if ($choice -eq "7") {
+        Write-Host ""
+        Write-Host "  $C_CYAN+--[ SELECT STORAGE SYSTEM ]------------------------------------+$C_RESET"
+        Write-Host "  $C_CYAN|                                                               |$C_RESET"
+        Write-Host "  $C_CYAN|  $C_YELLOW[1] LOCAL DISK MODE     $C_WHITE-- Fast Local Windows Storage (Offline) $C_CYAN|$C_RESET"
+        Write-Host "  $C_CYAN|  $C_GREEN[2] SUPABASE CLOUD MODE $C_WHITE-- Cloud Database & Bucket Sync       $C_CYAN|$C_RESET"
+        Write-Host "  $C_CYAN|                                                               |$C_RESET"
+        Write-Host "  $C_CYAN+----------------------------------------------------------------+$C_RESET"
+        Write-Host ""
+        $modeChoice = Read-Host "  $C_YELLOW> SELECT STORAGE SYSTEM CHOICE [1 or 2] (default=1)$C_RESET "
+        if ($modeChoice -eq "2") {
+            $newMode = "supabase"
+        } else {
+            $newMode = "local"
+        }
+        if (Test-Path $envFile) {
+            $lines = Get-Content $envFile | Where-Object { $_ -notmatch "^STORAGE_MODE=" }
+            $lines += "STORAGE_MODE=$newMode"
+            Set-Content -Path $envFile -Value $lines
+        } else {
+            Set-Content -Path $envFile -Value "STORAGE_MODE=$newMode"
+        }
+        Write-Host ""
+        Write-Host "  $C_GREEN[OK] STORAGE SYSTEM SET TO: $($newMode.ToUpper())$C_RESET"
+        Start-Sleep -Seconds 2
+        continue
+    }
+    if ($choice -notmatch '^[1-8]$') {
         $choice = "1"
     }
 
@@ -69,8 +134,19 @@ while ($mainLoop) {
     }
 
     # 2. Dependency Checking (cloudflared or ngrok)
-    $cfExe = "$PSScriptRoot\cloudflared.exe"
-    $ngrokExe = "$PSScriptRoot\ngrok.exe"
+    $cfCmd = Get-Command cloudflared -ErrorAction SilentlyContinue
+    if ($cfCmd) {
+        $cfExe = $cfCmd.Source
+    } else {
+        $cfExe = "$PSScriptRoot\cloudflared.exe"
+    }
+    
+    $ngrokCmd = Get-Command ngrok -ErrorAction SilentlyContinue
+    if ($ngrokCmd) {
+        $ngrokExe = $ngrokCmd.Source
+    } else {
+        $ngrokExe = "$PSScriptRoot\ngrok.exe"
+    }
 
     if ($choice -eq "2") {
         if (-not (Test-Path $cfExe)) {
@@ -185,6 +261,9 @@ while ($mainLoop) {
                 $url = $customDomain
             }
             else {
+                # Stop any existing cloudflared processes
+                Get-Process cloudflared -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
                 $retryCount = 0
                 $maxRetries = 3
                 while (-not $url -and $retryCount -lt $maxRetries) {
@@ -200,14 +279,17 @@ while ($mainLoop) {
 
                     Write-Host -NoNewline "$C_YELLOW[....] CONSTRUCTING ENCRYPTED CLOUDFLARE TUNNEL (ATTEMPT $retryCount/$maxRetries)...$C_RESET"
                     $counter = 0
-                    while (-not $url -and $counter -lt 15) {
+                    while (-not $url -and $counter -lt 50) {
                         Start-Sleep -Milliseconds 500
                         $counter++
-                        if (Test-Path "$PSScriptRoot\cloudflared.log") {
-                            $logContent = Get-Content "$PSScriptRoot\cloudflared.log" -ErrorAction SilentlyContinue
-                            $urlLine = $logContent | Select-String -Pattern "https://[a-zA-Z0-9\-]+\.trycloudflare\.com" | Where-Object { $_.Line -notlike "*api.trycloudflare.com*" } | Select-Object -First 1
-                            if ($urlLine) {
-                                $url = [regex]::match($urlLine.Line, "https://(?!api\.)[a-zA-Z0-9\-]+\.trycloudflare\.com").Value
+                        foreach ($logFile in @("$PSScriptRoot\cloudflared.log", "$PSScriptRoot\cloudflared_out.log")) {
+                            if (Test-Path $logFile) {
+                                $logContent = Get-Content $logFile -ErrorAction SilentlyContinue
+                                $urlLine = $logContent | Select-String -Pattern "https://[a-zA-Z0-9\-]+\.trycloudflare\.com" | Where-Object { $_.Line -notlike "*api.trycloudflare.com*" } | Select-Object -First 1
+                                if ($urlLine) {
+                                    $url = [regex]::match($urlLine.Line, "https://(?!api\.)[a-zA-Z0-9\-]+\.trycloudflare\.com").Value
+                                    break
+                                }
                             }
                         }
                         if ($tunnelProcess.HasExited) { break }
@@ -218,7 +300,8 @@ while ($mainLoop) {
                 }
 
                 if (-not $url) {
-                    Write-Host "`r$C_RED[X] CLOUDFLARE TUNNEL FAILED TO SECURE PUBLIC ENDPOINT.$C_RESET"
+                    Write-Host ""
+                    Write-Host "$C_RED[X] CLOUDFLARE TUNNEL FAILED TO SECURE PUBLIC ENDPOINT.$C_RESET"
                     Read-Host "Press Enter to return to menu..."
                     continue
                 }

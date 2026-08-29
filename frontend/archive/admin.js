@@ -1,9 +1,118 @@
+// --- Admin Authentication & Session Guard ---
+(function() {
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        let [resource, config] = args;
+        const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+        
+        if (typeof resource === 'string' && resource.includes('/api/admin/') && !resource.includes('/api/admin/login')) {
+            config = config || {};
+            config.headers = config.headers || {};
+            if (config.headers instanceof Headers) {
+                if (token) config.headers.set('Authorization', `Bearer ${token}`);
+            } else {
+                if (token) config.headers['Authorization'] = `Bearer ${token}`;
+            }
+        }
+        
+        const response = await originalFetch(resource, config);
+        
+        if (typeof resource === 'string' && resource.includes('/api/admin/') && !resource.includes('/api/admin/login')) {
+            if (response.status === 401 || response.status === 403) {
+                sessionStorage.removeItem('admin_token');
+                sessionStorage.removeItem('admin_user');
+                localStorage.removeItem('admin_token');
+                window.location.href = '/admin-login.html';
+            }
+        }
+        
+        return response;
+    };
+
+    // Intercept XMLHttpRequest for progress-based bulk uploads
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._url = url;
+        return originalXHROpen.call(this, method, url, ...rest);
+    };
+    XMLHttpRequest.prototype.send = function(...args) {
+        if (this._url && typeof this._url === 'string' && this._url.includes('/api/admin/') && !this._url.includes('/api/admin/login')) {
+            const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+            if (token) {
+                this.setRequestHeader('Authorization', `Bearer ${token}`);
+            }
+        }
+        return originalXHRSend.apply(this, args);
+    };
+})();
+
+async function verifyAdminSessionOnLoad() {
+    const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+    if (!token) {
+        window.location.href = '/admin-login.html';
+        return;
+    }
+    try {
+        const res = await fetch('/api/admin/verify');
+        if (!res.ok) {
+            sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('admin_user');
+            localStorage.removeItem('admin_token');
+            window.location.href = '/admin-login.html';
+        }
+    } catch (e) {
+        console.error('Admin session verification error:', e);
+    }
+}
+verifyAdminSessionOnLoad();
+
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Brand Logo Button Navigation ---
+    const brandLogoBtn = document.getElementById('brandLogoBtn');
+    if (brandLogoBtn) {
+        brandLogoBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const dashTab = document.querySelector('.nav-item[data-tab="dashboard"]');
+            if (dashTab) dashTab.click();
+        });
+    }
+
+    // --- Logout Confirmation Modal Handlers ---
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutModal = document.getElementById('logoutModal');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+    if (logoutBtn && logoutModal) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logoutModal.style.display = 'flex';
+            logoutModal.classList.remove('hidden');
+        });
+    }
+
+    if (cancelLogoutBtn && logoutModal) {
+        cancelLogoutBtn.addEventListener('click', () => {
+            logoutModal.style.display = 'none';
+            logoutModal.classList.add('hidden');
+        });
+    }
+
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', () => {
+            sessionStorage.removeItem('admin_token');
+            sessionStorage.removeItem('admin_user');
+            localStorage.removeItem('admin_token');
+            window.location.href = '/admin-login.html';
+        });
+    }
+
     const tableBody = document.getElementById('tableBody');
     const refreshBtn = document.getElementById('refreshBtn');
 
     // Tab Switching Logic
-    const navItems = document.querySelectorAll('.nav-item');
+    const navItems = document.querySelectorAll('.nav-item[data-tab]');
     const tabPanes = document.querySelectorAll('.tab-pane');
     const pageTitle = document.getElementById('pageTitle');
 
@@ -85,8 +194,57 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function showTableSkeleton(count = 5) {
+        if (!tableBody) return;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            html += `
+                <tr class="table-skeleton-row">
+                    <td><div class="skeleton-text-line" style="width: 60px;"></div></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="skeleton-avatar" style="width: 32px; height: 32px; border-radius: 4px;"></div>
+                            <div class="skeleton-text-line" style="width: 120px;"></div>
+                        </div>
+                    </td>
+                    <td><div class="skeleton-text-line" style="width: 70px;"></div></td>
+                    <td><div class="skeleton-text-line" style="width: 65px; height: 20px; border-radius: 10px;"></div></td>
+                    <td><div class="skeleton-text-line" style="width: 40px;"></div></td>
+                </tr>
+            `;
+        }
+        tableBody.innerHTML = html;
+    }
+
+    function showSkeletonGrid(containerId, count = 4, type = 'card') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        let html = '';
+        for (let i = 0; i < count; i++) {
+            if (type === 'user') {
+                html += `<div class="skeleton-grid-card"><div class="skeleton-avatar"></div><div class="skeleton-text-line"></div><div class="skeleton-text-line" style="width:40%;"></div></div>`;
+            } else {
+                html += `<div class="skeleton-photo-card"></div>`;
+            }
+        }
+        container.innerHTML = html;
+    }
+
     let lastPhotosDataStr = '';
     async function fetchRealData(force = false) {
+        // Display animated loading indicators while fetching
+        const statImages = document.getElementById('statImages');
+        const statUsers = document.getElementById('statUsers');
+        const isInitialLoad = !lastPhotosDataStr;
+
+        if (force || isInitialLoad) {
+            if (statImages) statImages.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:#d4af37;"></i>';
+            if (statUsers) statUsers.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:#d4af37;"></i>';
+            showTableSkeleton(5);
+            showSkeletonGrid('usersGrid', 4, 'user');
+            showSkeletonGrid('imagesGrid', 6, 'photo');
+        }
+
         try {
             const [photosRes, usersRes] = await Promise.all([
                 fetch(`/api/admin/photos`),
@@ -111,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error fetching data:', error);
-            if (force) {
+            if (force || isInitialLoad) {
                 tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff6b6b; padding: 20px;">Failed to load data. Is the backend running?</td></tr>';
             }
         }
@@ -260,6 +418,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const userName = user.id;
             const avatarSrc = user.avatar_url || `/gallery/${userName}/avatar.jpg`;
             const fallbackSrc = (user.photos && user.photos.length > 0) ? user.photos[0] : '';
+            const displayName = user.display_name || '';
+            const socials = user.social_profiles || {};
+            
+            let socialHtml = '';
+            if (socials.instagram) {
+                socialHtml += `<a href="https://instagram.com/${socials.instagram}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm instagram" title="@${socials.instagram}"><i class="fa-brands fa-instagram"></i></a>`;
+            }
+            if (socials.facebook) {
+                const fbUrl = socials.facebook.startsWith('http') ? socials.facebook : `https://facebook.com/${socials.facebook}`;
+                socialHtml += `<a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm facebook" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>`;
+            }
+            if (socials.linkedin) {
+                const liUrl = socials.linkedin.startsWith('http') ? socials.linkedin : `https://linkedin.com/in/${socials.linkedin}`;
+                socialHtml += `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm linkedin" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>`;
+            }
+            
             const div = document.createElement('div');
             div.style.cssText = 'background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer;';
             div.addEventListener('click', () => {
@@ -276,9 +450,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                     </svg>
                 </button>
-                <img src="${avatarSrc}" onerror="this.onerror=null; this.src='${fallbackSrc}';" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid var(--primary-color);">
-                <h3 style="margin: 0; font-size: 1rem; color: var(--text-light); word-break: break-all;">${userName}</h3>
-                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">${user.photo_count} photo${user.photo_count === 1 ? '' : 's'}</span>
+                <img src="${avatarSrc}" class="img-animated" onload="this.classList.add('loaded')" onerror="this.onerror=null; this.src='${fallbackSrc}';" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid var(--primary-color);">
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-light); word-break: break-all;">${displayName || 'Unnamed Guest'}</h3>
+                ${displayName ? `<span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 2px;">(${userName})</span>` : `<span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 2px;">${userName}</span>`}
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 6px;">${user.photo_count} photo${user.photo_count === 1 ? '' : 's'}</span>
+                ${socialHtml ? `<div class="user-card-social" style="margin-top: 8px; display: flex; gap: 6px; justify-content: center;">${socialHtml}</div>` : ''}
+                <button class="btn-edit-profile" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.75rem; background: rgba(197, 168, 128, 0.12); border: 1px solid rgba(197, 168, 128, 0.25); border-radius: 6px; color: var(--color-primary, #C5A880); cursor: pointer; transition: all 0.2s ease;" title="Edit Profile">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; vertical-align: middle;">
+                        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    Edit Profile
+                </button>
             `;
             const renameUserBtn = div.querySelector('.rename-user-btn');
             renameUserBtn.addEventListener('click', async (e) => {
@@ -316,6 +498,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (err) { console.error('Failed to delete user', err); }
                 }
             });
+            const editProfileBtn = div.querySelector('.btn-edit-profile');
+            editProfileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openProfileModal(userName);
+            });
             usersGrid.appendChild(div);
         });
         
@@ -330,6 +517,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadMoreUsersBtn.style.display = 'none';
             }
         }
+    }
+
+    // --- Profile Modal Logic ---
+    const profileOverlay = document.getElementById('profileModalOverlay');
+    const profileUserId = document.getElementById('profileUserId');
+    const profileDisplayName = document.getElementById('profileDisplayName');
+    const profileInstagram = document.getElementById('profileInstagram');
+    const profileFacebook = document.getElementById('profileFacebook');
+    const profileLinkedin = document.getElementById('profileLinkedin');
+    const profileCancelBtn = document.getElementById('profileCancelBtn');
+    const profileSaveBtn = document.getElementById('profileSaveBtn');
+
+    // Open profile modal
+    window.openProfileModal = async function(userId) {
+        if (!profileOverlay) return;
+        profileUserId.value = userId;
+        profileDisplayName.value = '';
+        profileInstagram.value = '';
+        profileFacebook.value = '';
+        profileLinkedin.value = '';
+
+        try {
+            const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+            const res = await fetch(`/api/admin/users/profile/${encodeURIComponent(userId)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const profile = data.profile || {};
+                profileDisplayName.value = profile.display_name || '';
+                const socials = profile.social_profiles || {};
+                profileInstagram.value = socials.instagram || '';
+                profileFacebook.value = socials.facebook || '';
+                profileLinkedin.value = socials.linkedin || '';
+            }
+        } catch (e) {
+            console.error('Failed to load profile:', e);
+        }
+
+        profileOverlay.classList.add('active');
+    };
+
+    // Close profile modal
+    function closeProfileModal() {
+        if (profileOverlay) profileOverlay.classList.remove('active');
+    }
+
+    if (profileCancelBtn) profileCancelBtn.addEventListener('click', closeProfileModal);
+    if (profileOverlay) {
+        profileOverlay.addEventListener('click', function(e) {
+            if (e.target === profileOverlay) closeProfileModal();
+        });
+    }
+
+    // Save profile
+    if (profileSaveBtn) {
+        profileSaveBtn.addEventListener('click', async function() {
+            const userId = profileUserId.value;
+            if (!userId) return;
+
+            profileSaveBtn.disabled = true;
+            profileSaveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+                const res = await fetch('/api/admin/users/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        display_name: profileDisplayName.value.trim(),
+                        instagram: profileInstagram.value.trim(),
+                        facebook: profileFacebook.value.trim(),
+                        linkedin: profileLinkedin.value.trim()
+                    })
+                });
+
+                if (res.ok) {
+                    closeProfileModal();
+                    // Reload users data
+                    fetchRealData(true);
+                } else {
+                    const err = await res.json();
+                    alert('Failed to save profile: ' + (err.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to save profile:', e);
+                alert('Failed to save profile. Please try again.');
+            } finally {
+                profileSaveBtn.disabled = false;
+                profileSaveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Profile';
+            }
+        });
     }
 
 
@@ -347,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Refresh button logic
     refreshBtn.addEventListener('click', async () => {
-        refreshBtn.innerHTML = 'Refreshing...';
+        refreshBtn.innerHTML = '<i class="fa-solid fa-rotate fa-spin" style="margin-right: 6px;"></i> Refreshing...';
         refreshBtn.disabled = true;
         
         await fetchRealData(true);
@@ -556,18 +839,27 @@ document.addEventListener('DOMContentLoaded', () => {
         activeUploadXHRs = [];
     }
 
-    // Client-side image compression for ultra-fast uploads
+    // Client-side image compression for ultra-fast uploads with safety timeout
     function compressImageForUpload(file, maxWidth = 1920, quality = 0.80) {
-        if (!file || !file.type || !file.type.startsWith('image/') || file.size < 300 * 1024) {
+        if (!file || !file.type || !file.type.startsWith('image/') || file.size < 1024 * 1024) {
             return Promise.resolve(file);
         }
         return new Promise((resolve) => {
+            let isResolved = false;
+            const timer = setTimeout(() => {
+                if (!isResolved) {
+                    isResolved = true;
+                    resolve(file);
+                }
+            }, 1200);
+
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = event => {
                 const img = new Image();
                 img.src = event.target.result;
                 img.onload = () => {
+                    if (isResolved) return;
                     let width = img.width;
                     let height = img.height;
                     if (width > maxWidth) {
@@ -580,19 +872,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     canvas.toBlob((blob) => {
-                        if (blob && blob.size < file.size) {
-                            resolve(new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            }));
-                        } else {
-                            resolve(file);
+                        if (!isResolved) {
+                            isResolved = true;
+                            clearTimeout(timer);
+                            if (blob && blob.size < file.size) {
+                                resolve(new File([blob], file.name, {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                }));
+                            } else {
+                                resolve(file);
+                            }
                         }
                     }, 'image/jpeg', quality);
                 };
-                img.onerror = () => resolve(file);
+                img.onerror = () => {
+                    if (!isResolved) { isResolved = true; clearTimeout(timer); resolve(file); }
+                };
             };
-            reader.onerror = () => resolve(file);
+            reader.onerror = () => {
+                if (!isResolved) { isResolved = true; clearTimeout(timer); resolve(file); }
+            };
         });
     }
 
@@ -782,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = category ? `/api/admin/couple-photos/upload` : `/api/admin/upload`;
             
             xhr.open('POST', url, true);
+            xhr.timeout = 45000; // 45s safety timeout per photo upload request
             
             xhr.upload.onprogress = function(event) {
                 if (isUploadCancelled) {
@@ -815,6 +1116,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 reject(new Error(isUploadCancelled ? 'Cancelled' : 'Network error'));
             };
 
+            xhr.ontimeout = function() {
+                cleanupXHR();
+                reject(new Error('Upload request timed out after 45 seconds'));
+            };
+
             xhr.onabort = function() {
                 cleanupXHR();
                 reject(new Error('Cancelled'));
@@ -832,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // High-speed parallel concurrent upload worker queue
     async function processBatchUploadConcurrent(files, category, previewPrefix) {
-        const CONCURRENCY_LIMIT = 8;
+        const CONCURRENCY_LIMIT = 4;
         const totalFiles = files.length;
         let completedCount = 0;
         let successCount = 0;
@@ -1924,6 +2230,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastCouplePhotosDataStr = '';
     async function fetchCouplePhotos(force = false) {
+        if (force && typeof showSkeletonGrid === 'function') {
+            showSkeletonGrid('couplePhotosGrid', 6, 'photo');
+        }
         try {
             const response = await fetch(`/api/admin/couple-photos`);
             const data = await response.json();

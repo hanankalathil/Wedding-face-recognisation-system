@@ -8,7 +8,7 @@ from uniface.recognition import ArcFace
 from uniface.constants import SCRFDWeights, ArcFaceWeights
 from app.core.config import GALLERY_DIR, THRESHOLD, is_supabase_enabled
 from app.services.db_service import get_db, load_db, save_db
-from app.services.supabase_service import upload_file_to_supabase, download_file_from_supabase
+from app.services.storage_service import get_storage_service
 
 # Initialize high-accuracy SCRFD detector (10G with keypoints) and ResNet ArcFace recognizer
 detector = SCRFD(
@@ -163,7 +163,7 @@ def process_image_background(img, final_filename, original_name):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             cv2.imwrite(file_path, img)
             if is_supabase_enabled():
-                upload_file_to_supabase(file_path, f"gallery/{relative_path}")
+                get_storage_service().upload_file(file_path, f"gallery/{relative_path}")
             return
             
         if len(valid_faces) > 1:
@@ -212,8 +212,7 @@ def process_image_background(img, final_filename, original_name):
             relative_path = f"{person_id}/{final_filename}"
             file_path = os.path.join(GALLERY_DIR, relative_path)
             cv2.imwrite(file_path, img)
-            if is_supabase_enabled():
-                upload_file_to_supabase(file_path, f"gallery/{relative_path}")
+            get_storage_service().upload_file(file_path, f"gallery/{relative_path}")
             
             photo_url = f"/gallery/{relative_path}"
             register_face(person_id, db["persons"][person_id]["representative_embedding"], photo_url)
@@ -222,8 +221,7 @@ def process_image_background(img, final_filename, original_name):
             os.makedirs(group_photos_dir, exist_ok=True)
             group_file_path = os.path.join(group_photos_dir, final_filename)
             cv2.imwrite(group_file_path, img)
-            if is_supabase_enabled():
-                upload_file_to_supabase(group_file_path, f"gallery/Group photo/{final_filename}")
+            get_storage_service().upload_file(group_file_path, f"gallery/Group photo/{final_filename}")
             group_photo_url = f"/gallery/Group photo/{final_filename}"
             
             # Register group photo URL for each matched person
@@ -281,8 +279,7 @@ def sync_group_photos_to_personal_folders():
                         dest_file = os.path.join(person_dir, filename)
                         if not os.path.exists(dest_file):
                             shutil.copy2(src_file, dest_file)
-                            if is_supabase_enabled():
-                                upload_file_to_supabase(dest_file, f"gallery/{pid}/{filename}")
+                            get_storage_service().upload_file(dest_file, f"gallery/{pid}/{filename}")
                             synced_count += 1
                         
                         personal_photo_url = f"/gallery/{pid}/{filename}"
@@ -379,8 +376,7 @@ def generate_avatar_for_person(person_id, force=False):
                 crop = img[py1:py2, px1:px2]
                 if crop.size > 0:
                     cv2.imwrite(avatar_path, crop)
-                    if is_supabase_enabled():
-                        upload_file_to_supabase(avatar_path, f"gallery/{person_id}/avatar.jpg")
+                    get_storage_service().upload_file(avatar_path, f"gallery/{person_id}/avatar.jpg")
                     return avatar_path
                     
         return None

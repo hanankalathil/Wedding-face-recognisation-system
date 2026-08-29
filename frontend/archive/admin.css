@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('../css/fonts.css');
 
 :root {
     --bg-dark: #060913;
@@ -82,6 +82,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .nav-item {
@@ -110,15 +112,110 @@ body {
 }
 
 .nav-item.active {
-    background: linear-gradient(90deg, rgba(26, 54, 93, 0.15), transparent);
-    color: var(--primary);
-    border-left: 4px solid var(--primary);
-    box-shadow: inset 20px 0 20px -20px rgba(26, 54, 93, 0.3);
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.03));
+    color: #818cf8;
+    border-left: 4px solid #6366f1;
+    box-shadow: inset 12px 0 20px -10px rgba(99, 102, 241, 0.3);
 }
 
 .nav-item.active svg {
-    color: var(--primary);
+    color: #818cf8;
     transform: scale(1.1);
+}
+
+/* Sidebar Footer & Dedicated Logout Button */
+.sidebar-footer {
+    padding: 18px 16px;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: rgba(10, 14, 26, 0.4);
+}
+
+.sidebar-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #d4af37);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.sidebar-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ff6b6b;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-logout-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-logout-btn:hover {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+    transform: translateY(-1px);
+}
+
+.sidebar-logout-btn:hover svg {
+    transform: translateX(3px);
+}
+
+.sidebar-logout-btn:active {
+    transform: translateY(0);
 }
 
 /* Main Content Styles */
@@ -1372,6 +1469,77 @@ body {
     background: rgba(127, 112, 245, 0.2);
     padding: 4px 10px;
     border-radius: 20px;
+}
+
+/* --- Skeleton Shimmer & Image Smooth Fade-In Animations --- */
+@keyframes shimmerPulse {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(212, 175, 55, 0.15) 50%, rgba(255, 255, 255, 0.03) 75%);
+    background-size: 200% 100%;
+    animation: shimmerPulse 1.8s infinite linear;
+    border-radius: 12px;
+}
+
+.skeleton-grid-card {
+    background: rgba(16, 23, 42, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 16px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.skeleton-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(212, 175, 55, 0.18) 50%, rgba(255, 255, 255, 0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmerPulse 1.8s infinite linear;
+}
+
+.skeleton-photo-card {
+    height: 200px;
+    border-radius: 16px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(212, 175, 55, 0.15) 50%, rgba(255, 255, 255, 0.03) 75%);
+    background-size: 200% 100%;
+    animation: shimmerPulse 1.8s infinite linear;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.skeleton-text-line {
+    height: 14px;
+    width: 65%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(212, 175, 55, 0.15) 50%, rgba(255, 255, 255, 0.04) 75%);
+    background-size: 200% 100%;
+    animation: shimmerPulse 1.8s infinite linear;
+}
+
+@keyframes imgSmoothFadeIn {
+    0% { opacity: 0; transform: scale(0.96); filter: blur(4px); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+.img-animated {
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.img-animated.loaded {
+    animation: imgSmoothFadeIn 0.5s ease-out forwards;
+}
+
+.table-skeleton-row td {
+    padding: 16px 20px;
+    vertical-align: middle;
 }
 
 

@@ -4,10 +4,11 @@ import shutil
 import hashlib
 import zipfile
 import io
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import cv2
 import numpy as np
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Depends
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from app.core.config import GALLERY_DIR, COUPLE_PHOTO_CATEGORIES, is_supabase_enabled
@@ -18,10 +19,34 @@ from app.services.supabase_service import (
     delete_file_from_supabase,
     download_file_from_supabase,
 )
+from app.services.storage_service import get_storage_service
+from app.core.auth import get_current_admin_user, authenticate_supabase_user
+
+# Bounded threadpool executor to limit concurrent AI inference runs on CPU (prevents process freeze/GIL starvation)
+face_process_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face_proc")
+
+# Public admin router (for login)
+public_router = APIRouter()
+
+# Protected admin router - requires valid admin JWT and server-side authorization
+router = APIRouter(dependencies=[Depends(get_current_admin_user)])
 
 
-# Admin API router module - unique photos fix
-router = APIRouter()
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@public_router.post("/login")
+async def admin_login(payload: AdminLoginRequest):
+    """Public login endpoint for wedding administrators."""
+    return authenticate_supabase_user(payload.email, payload.password)
+
+
+@router.get("/verify")
+async def verify_admin_session(current_user: dict = Depends(get_current_admin_user)):
+    """Verifies that the client possesses a valid, active admin session."""
+    return {"status": "authenticated", "user": current_user}
 
 
 
@@ -117,8 +142,15 @@ class RenameUserRequest(BaseModel):
     old_user_id: str
     new_user_id: str
 
+class UpdateProfileRequest(BaseModel):
+    user_id: str
+    display_name: str = ""
+    instagram: str = ""
+    facebook: str = ""
+    linkedin: str = ""
+
 @router.post("/upload")
-async def admin_upload_image(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def admin_upload_image(file: UploadFile = File(...)):
     try:
         group_photos_dir = os.path.join(GALLERY_DIR, "Group photo")
         unrecognized_dir = os.path.join(GALLERY_DIR, "unrecognized")
@@ -136,7 +168,7 @@ async def admin_upload_image(background_tasks: BackgroundTasks, file: UploadFile
         original_name = file.filename
         final_filename = f"{uuid.uuid4().hex[:8]}_{original_name}"
         
-        background_tasks.add_task(process_image_background, img, final_filename, original_name)
+        face_process_executor.submit(process_image_background, img, final_filename, original_name)
         
         return {"status": "success", "message": f"Successfully uploaded {file.filename}, processing in background"}
     except Exception as e:
@@ -330,6 +362,8 @@ async def get_all_users():
                 
             users_list.append({
                 "id": pid,
+                "display_name": pdata.get("display_name", ""),
+                "social_profiles": pdata.get("social_profiles", {}),
                 "avatar_url": avatar_url,
                 "photo_count": len(unique_photos),
                 "photos": unique_photos
@@ -450,8 +484,7 @@ async def upload_couple_photo(file: UploadFile = File(...), category: str = Form
         rel_path = f"couple_photos/{normalized_cat}/{filename}"
         photo_url = f"/gallery/{rel_path}"
 
-        if is_supabase_enabled():
-            upload_file_to_supabase(file_path, f"gallery/{rel_path}")
+        get_storage_service().upload_file(file_path, f"gallery/{rel_path}")
 
         load_db()
         db = get_db()
@@ -477,7 +510,7 @@ async def upload_couple_photo(file: UploadFile = File(...), category: str = Form
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/couple-photos")
+@public_router.get("/couple-photos")
 async def get_couple_photos():
     load_db()
     db = get_db()
@@ -522,7 +555,7 @@ async def delete_couple_photo(req: DeletePhotoRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/categories")
+@public_router.get("/categories")
 async def get_categories():
     load_db()
     db = get_db()
@@ -629,7 +662,7 @@ async def edit_category(req: EditCategoryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/couple-settings")
+@public_router.get("/couple-settings")
 async def get_couple_settings():
     load_db()
     db = get_db()
@@ -836,6 +869,60 @@ async def rename_user(req: RenameUserRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/users/update-profile")
+async def update_user_profile(req: UpdateProfileRequest):
+    try:
+        load_db()
+        db = get_db()
+        
+        if req.user_id not in db.get("persons", {}):
+            raise HTTPException(status_code=404, detail=f"User {req.user_id} not found")
+        
+        pdata = db["persons"][req.user_id]
+        pdata["display_name"] = req.display_name.strip()
+        pdata["social_profiles"] = {
+            "instagram": req.instagram.strip().lstrip("@"),
+            "facebook": req.facebook.strip(),
+            "linkedin": req.linkedin.strip()
+        }
+        save_db()
+        
+        return {
+            "status": "success",
+            "message": f"Profile updated for {req.user_id}",
+            "profile": {
+                "display_name": pdata["display_name"],
+                "social_profiles": pdata["social_profiles"]
+            }
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users/profile/{person_id}")
+async def get_user_profile(person_id: str):
+    try:
+        load_db()
+        db = get_db()
+        
+        if person_id not in db.get("persons", {}):
+            raise HTTPException(status_code=404, detail=f"User {person_id} not found")
+        
+        pdata = db["persons"][person_id]
+        return {
+            "status": "success",
+            "profile": {
+                "id": person_id,
+                "display_name": pdata.get("display_name", ""),
+                "social_profiles": pdata.get("social_profiles", {})
+            }
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/reset-system")
 async def reset_system_for_new_wedding():

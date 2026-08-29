@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof m === 'string') return { image_url: m, confidence: 'N/A' };
                     return m;
                 });
-                renderResults(formattedMatches);
+                renderResults(formattedMatches, data.persons || []);
             } else {
                 showEmptyState();
             }
@@ -281,16 +281,135 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Results Rendering
-    function renderResults(matches) {
+    function renderResults(matches, persons) {
         currentMatches = matches.map(m => m.image_url || m);
         const uploadSection = document.querySelector('.upload-section');
         if (uploadSection) {
             uploadSection.style.display = 'none';
         }
         resultsSection.style.display = 'block';
-        resultsGrid.style.display = 'grid'; // Ensure grid is visible (fixes empty state hidden grid bug)
+        resultsGrid.style.display = 'grid';
         resultsGrid.innerHTML = '';
         emptyState.style.display = 'none';
+
+        // Render greeting / name prompt for each matched person
+        const personInfoContainer = document.getElementById('personInfoContainer');
+        if (personInfoContainer) {
+            personInfoContainer.innerHTML = '';
+            if (persons && persons.length > 0) {
+                persons.forEach(person => {
+                    const avatarUrl = person.avatar_url || '';
+                    const socials = person.social_profiles || {};
+                    const hasName = person.display_name && person.display_name.trim() !== '';
+                    
+                    let socialHtml = '';
+                    if (socials.instagram) {
+                        socialHtml += `<a href="https://instagram.com/${socials.instagram}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm instagram" title="@${socials.instagram}"><i class="fa-brands fa-instagram"></i></a>`;
+                    }
+                    if (socials.facebook) {
+                        const fbUrl = socials.facebook.startsWith('http') ? socials.facebook : `https://facebook.com/${socials.facebook}`;
+                        socialHtml += `<a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm facebook" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>`;
+                    }
+                    if (socials.linkedin) {
+                        const liUrl = socials.linkedin.startsWith('http') ? socials.linkedin : `https://linkedin.com/in/${socials.linkedin}`;
+                        socialHtml += `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm linkedin" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>`;
+                    }
+                    
+                    const banner = document.createElement('div');
+                    banner.className = 'person-info-banner';
+                    
+                    if (hasName) {
+                        // Known person — show personalized greeting
+                        banner.innerHTML = `
+                            ${avatarUrl ? `<img src="${avatarUrl}" alt="${person.display_name}" class="person-info-avatar" onerror="this.style.display='none'">` : ''}
+                            <div class="person-info-details">
+                                <div class="person-info-name">Hi ${person.display_name}! 👋</div>
+                                <div class="person-info-label">We found ${person.photo_count || 0} photo(s) of you from the wedding</div>
+                                ${socialHtml ? `<div class="person-info-socials">${socialHtml}</div>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        // Unknown person — ask for their name
+                        banner.innerHTML = `
+                            ${avatarUrl ? `<img src="${avatarUrl}" alt="Guest" class="person-info-avatar" onerror="this.style.display='none'">` : ''}
+                            <div class="person-info-details">
+                                <div class="person-info-name">We found your photos! 🎉</div>
+                                <div class="person-info-label">We matched ${person.photo_count || 0} photo(s) from the wedding. What's your name?</div>
+                                <div class="guest-name-prompt" id="namePrompt_${person.id}">
+                                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
+                                        <input type="text" class="guest-name-input" id="nameInput_${person.id}" placeholder="Enter your name..." maxlength="50">
+                                        <button class="btn-save-name" id="nameSaveBtn_${person.id}">
+                                            <i class="fa-solid fa-check"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    personInfoContainer.appendChild(banner);
+                    
+                    // Attach name save handler for unnamed persons
+                    if (!hasName) {
+                        const saveBtn = document.getElementById(`nameSaveBtn_${person.id}`);
+                        const nameInput = document.getElementById(`nameInput_${person.id}`);
+                        
+                        if (saveBtn && nameInput) {
+                            const saveName = async () => {
+                                const enteredName = nameInput.value.trim();
+                                if (!enteredName) {
+                                    showToast('Please enter your name.', 'error');
+                                    return;
+                                }
+                                
+                                saveBtn.disabled = true;
+                                saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                                
+                                try {
+                                    const res = await fetch('/api/recognize/set-name', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            person_id: person.id,
+                                            display_name: enteredName
+                                        })
+                                    });
+                                    
+                                    if (res.ok) {
+                                        // Replace the prompt with a greeting
+                                        const prompt = document.getElementById(`namePrompt_${person.id}`);
+                                        const bannerEl = prompt.closest('.person-info-banner');
+                                        const nameEl = bannerEl.querySelector('.person-info-name');
+                                        const labelEl = bannerEl.querySelector('.person-info-label');
+                                        
+                                        nameEl.textContent = `Hi ${enteredName}! 👋`;
+                                        labelEl.textContent = `We found ${person.photo_count || 0} photo(s) of you from the wedding`;
+                                        prompt.remove();
+                                        
+                                        showToast(`Welcome, ${enteredName}!`, 'success');
+                                    } else {
+                                        const err = await res.json();
+                                        showToast(err.detail || 'Failed to save name', 'error');
+                                        saveBtn.disabled = false;
+                                        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save';
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to save name:', e);
+                                    showToast('Failed to save name. Please try again.', 'error');
+                                    saveBtn.disabled = false;
+                                    saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save';
+                                }
+                            };
+                            
+                            saveBtn.addEventListener('click', saveName);
+                            nameInput.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') saveName();
+                            });
+                        }
+                    }
+                });
+            }
+        }
 
         matches.forEach((match, index) => {
             let imgUrl = match.image_url || match;
@@ -424,6 +543,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         selectedFile = null;
         currentMatches = [];
+        const personInfoContainer = document.getElementById('personInfoContainer');
+        if (personInfoContainer) personInfoContainer.innerHTML = '';
         previewSection.style.display = 'none';
         
         const uploadAreaContent = document.querySelector('.upload-area-content');

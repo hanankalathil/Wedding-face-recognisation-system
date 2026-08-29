@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.core.config import GALLERY_DIR, is_supabase_enabled
-from app.services.supabase_service import download_file_from_supabase
+from app.services.storage_service import get_storage_service
 from app.api import admin, recognize, download
 from app.services.db_service import load_db
 
@@ -35,13 +35,17 @@ os.makedirs(GALLERY_DIR, exist_ok=True)
 async def get_gallery_file(file_path: str):
     local_path = os.path.normpath(os.path.join(GALLERY_DIR, file_path))
     if os.path.exists(local_path) and os.path.isfile(local_path):
-        return FileResponse(local_path)
+        return FileResponse(local_path, headers={"Cache-Control": "public, max-age=86400"})
         
-    if is_supabase_enabled():
-        raw_bytes = download_file_from_supabase(f"gallery/{file_path}")
-        if raw_bytes:
-            media_type = mimetypes.guess_type(file_path)[0] or "image/jpeg"
-            return Response(content=raw_bytes, media_type=media_type)
+    storage = get_storage_service()
+    raw_bytes = storage.download_file(file_path)
+    if raw_bytes:
+        media_type = mimetypes.guess_type(file_path)[0] or "image/jpeg"
+        return Response(
+            content=raw_bytes,
+            media_type=media_type,
+            headers={"Cache-Control": "public, max-age=86400"}
+        )
             
     raise HTTPException(status_code=404, detail="File not found")
 
@@ -75,6 +79,7 @@ async def shutdown_event():
     except Exception as e:
         print(f"Error stopping WiFi services on shutdown: {e}")
 
+app.include_router(admin.public_router, prefix="/api/admin", tags=["admin-auth"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(recognize.router, prefix="/api/recognize", tags=["recognize"])
 app.include_router(download.router, prefix="/api/download", tags=["download"])

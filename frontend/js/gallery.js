@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const catPhotos = galleryData.filter(item => item.category === normalizedCat);
             
             // Cover Photo: first photo in the category, or default fallback
-            let coverSrc = 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop';
+            let coverSrc = 'assets/backgrounds/hero-image.jpg';
             if (catPhotos.length > 0 && catPhotos[0].src) {
                 coverSrc = catPhotos[0].src;
             }

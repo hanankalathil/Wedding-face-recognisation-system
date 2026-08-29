@@ -33,5 +33,5 @@ cli/
 # Backup directory
 backup/
 
-
-
+# Log files
+*.log

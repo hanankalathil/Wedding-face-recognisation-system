@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrator Login | Wedding Memories</title>
+    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/all.min.css">
+    <link rel="stylesheet" href="css/social_profile.css?v=1.0">
+    <style>
+        :root {
+            --bg-dark: #0a0a0c;
+            --card-bg: rgba(18, 18, 24, 0.85);
+            --accent-gold: #d4af37;
+            --accent-purple: #8a2be2;
+            --text-main: #f0f0f5;
+            --text-muted: #8a8a9e;
+            --border-color: rgba(212, 175, 55, 0.2);
+            --border-glow: rgba(212, 175, 55, 0.4);
+            --error-bg: rgba(255, 77, 77, 0.15);
+            --error-border: rgba(255, 77, 77, 0.4);
+            --error-text: #ff6b6b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(138, 43, 226, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.12) 0%, transparent 40%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-main);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px 32px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
+                        0 0 30px rgba(212, 175, 55, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-purple));
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.25);
+        }
+
+        .brand-icon i {
+            font-size: 26px;
+            color: #ffffff;
+        }
+
+        .brand-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 30%, var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .brand-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .alert-box {
+            display: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error-text);
+            font-size: 14px;
+            margin-bottom: 24px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-box.show {
+            display: flex;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i.left-icon {
+            position: absolute;
+            left: 14px;
+            color: var(--text-muted);
+            font-size: 15px;
+            pointer-events: none;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0 44px;
+            color: var(--text-main);
+            font-size: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+            background: rgba(212, 175, 55, 0.05);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .toggle-password:hover {
+            color: var(--text-main);
+        }
+
+        .btn-submit {
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent-gold), #b89628);
+            border: none;
+            border-radius: 10px;
+            color: #0a0a0c;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(212, 175, 55, 0.35);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(10, 10, 12, 0.3);
+            border-top-color: #0a0a0c;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .footer-note a {
+            color: var(--accent-gold);
+            text-decoration: none;
+        }
+
+        .footer-note a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="brand-header">
+            <div class="brand-icon">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h1 class="brand-title">Admin Portal</h1>
+            <p class="brand-subtitle">Wedding Face Recognition System</p>
+        </div>
+
+        <div id="alertBox" class="alert-box">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span id="alertText">Invalid credentials</span>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label" for="email">Admin Email</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-envelope left-icon"></i>
+                    <input type="email" id="email" class="form-input" placeholder="admin@wedding.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-key left-icon"></i>
+                    <input type="password" id="password" class="form-input" placeholder="••••••••••••" required autocomplete="current-password">
+                    <button type="button" id="togglePasswordBtn" class="toggle-password" title="Toggle Password Visibility">
+                        <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-submit">
+                <span id="btnText">Sign In to Dashboard</span>
+                <div id="spinner" class="spinner"></div>
+            </button>
+        </form>
+
+        <div class="footer-note">
+            <a href="/find-my-photos.html"><i class="fa-solid fa-arrow-left"></i> Return to Guest Portal</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.protocol.startsWith('http')
+            ? `${window.location.origin}/api`
+            : 'http://127.0.0.1:8000/api';
+
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const alertBox = document.getElementById('alertBox');
+        const alertText = document.getElementById('alertText');
+
+        // Check if already authenticated
+        async function checkExistingSession() {
+            const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/admin/verify`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        window.location.href = '/admin';
+                    }
+                } catch (e) {
+                    console.log('Session check offline or expired');
+                }
+            }
+        }
+        checkExistingSession();
+
+        // Toggle password visibility
+        togglePasswordBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
+
+        // Show error alert
+        function showError(message) {
+            alertText.textContent = message;
+            alertBox.classList.add('show');
+        }
+
+        function hideError() {
+            alertBox.classList.remove('show');
+        }
+
+        // Handle Login Submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideError();
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showError('Please enter both email and password.');
+                return;
+            }
+
+            // Set loading state
+            submitBtn.disabled = true;
+            btnText.textContent = 'Authenticating...';
+            spinner.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Authentication failed');
+                }
+
+                if (data.access_token) {
+                    sessionStorage.setItem('admin_token', data.access_token);
+                    sessionStorage.setItem('admin_user', JSON.stringify(data.user || {}));
+                    window.location.href = '/admin';
+                } else {
+                    throw new Error('Invalid token response from server');
+                }
+            } catch (err) {
+                showError(err.message || 'Connection error. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Sign In to Dashboard';
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+
+    <!-- Profile Edit Modal -->
+    <div class="profile-modal-overlay" id="profileModalOverlay">
+        <div class="profile-modal">
+            <h3><i class="fa-solid fa-user-pen"></i> Edit Profile</h3>
+            <input type="hidden" id="profileUserId">
+            <div class="profile-form-group">
+                <label>Display Name</label>
+                <div class="input-with-icon">
+                    <i class="fa-solid fa-user"></i>
+                    <input type="text" id="profileDisplayName" placeholder="e.g. John Doe">
+                </div>
+            </div>
+            <div class="profile-form-group">
+                <label>Instagram</label>
+                <div class="input-with-icon">
+                    <i class="fa-brands fa-instagram"></i>
+                    <input type="text" id="profileInstagram" placeholder="e.g. johndoe">
+                </div>
+            </div>
+            <div class="profile-form-group">
+                <label>Facebook</label>
+                <div class="input-with-icon">
+                    <i class="fa-brands fa-facebook-f"></i>
+                    <input type="text" id="profileFacebook" placeholder="e.g. john.doe or profile URL">
+                </div>
+            </div>
+            <div class="profile-form-group">
+                <label>LinkedIn</label>
+                <div class="input-with-icon">
+                    <i class="fa-brands fa-linkedin-in"></i>
+                    <input type="text" id="profileLinkedin" placeholder="e.g. johndoe or profile URL">
+                </div>
+            </div>
+            <div class="profile-modal-actions">
+                <button class="btn btn-cancel" id="profileCancelBtn">Cancel</button>
+                <button class="btn btn-save" id="profileSaveBtn"><i class="fa-solid fa-check"></i> Save Profile</button>
+            </div>
+        </div>
+    </div>
+<script>
+(function() {
+    const profileOverlay = document.getElementById('profileModalOverlay');
+    const profileUserId = document.getElementById('profileUserId');
+    const profileDisplayName = document.getElementById('profileDisplayName');
+    const profileInstagram = document.getElementById('profileInstagram');
+    const profileFacebook = document.getElementById('profileFacebook');
+    const profileLinkedin = document.getElementById('profileLinkedin');
+    const profileCancelBtn = document.getElementById('profileCancelBtn');
+    const profileSaveBtn = document.getElementById('profileSaveBtn');
+
+    // Open profile modal
+    window.openProfileModal = async function(userId) {
+        if (!profileOverlay) return;
+        profileUserId.value = userId;
+        profileDisplayName.value = '';
+        profileInstagram.value = '';
+        profileFacebook.value = '';
+        profileLinkedin.value = '';
+
+        try {
+            const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+            const res = await fetch(`/api/admin/users/profile/${encodeURIComponent(userId)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const profile = data.profile || {};
+                profileDisplayName.value = profile.display_name || '';
+                const socials = profile.social_profiles || {};
+                profileInstagram.value = socials.instagram || '';
+                profileFacebook.value = socials.facebook || '';
+                profileLinkedin.value = socials.linkedin || '';
+            }
+        } catch (e) {
+            console.error('Failed to load profile:', e);
+        }
+
+        profileOverlay.classList.add('active');
+    };
+
+    // Close profile modal
+    function closeProfileModal() {
+        if (profileOverlay) profileOverlay.classList.remove('active');
+    }
+
+    if (profileCancelBtn) profileCancelBtn.addEventListener('click', closeProfileModal);
+    if (profileOverlay) profileOverlay.addEventListener('click', function(e) {
+        if (e.target === profileOverlay) closeProfileModal();
+    });
+
+    // Save profile
+    if (profileSaveBtn) {
+        profileSaveBtn.addEventListener('click', async function() {
+            const userId = profileUserId.value;
+            if (!userId) return;
+
+            profileSaveBtn.disabled = true;
+            profileSaveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+                const res = await fetch('/api/admin/users/update-profile', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        display_name: profileDisplayName.value.trim(),
+                        instagram: profileInstagram.value.trim(),
+                        facebook: profileFacebook.value.trim(),
+                        linkedin: profileLinkedin.value.trim()
+                    })
+                });
+
+                if (res.ok) {
+                    closeProfileModal();
+                    // Refresh the user list if the function exists
+                    if (typeof loadUsers === 'function') loadUsers();
+                    else if (typeof refreshUsers === 'function') refreshUsers();
+                    else location.reload();
+                } else {
+                    const err = await res.json();
+                    alert('Failed to save profile: ' + (err.detail || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Failed to save profile:', e);
+                alert('Failed to save profile. Please try again.');
+            } finally {
+                profileSaveBtn.disabled = false;
+                profileSaveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Save Profile';
+            }
+        });
+    }
+})();
+</script>
+</body>
+</html>
