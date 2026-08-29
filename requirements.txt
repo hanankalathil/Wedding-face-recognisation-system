@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+uniface[cpu]
+opencv-python-headless
+numpy
+supabase
