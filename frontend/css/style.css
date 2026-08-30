@@ -236,7 +236,16 @@ img {
 .nav-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+}
+
+.nav-brand .brand-logo {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid var(--color-accent);
+    box-shadow: 0 0 10px rgba(197, 168, 128, 0.2);
 }
 
 .nav-brand span {

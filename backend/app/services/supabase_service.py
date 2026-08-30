@@ -149,9 +149,24 @@ def load_db_from_supabase() -> Dict[str, Any]:
             if isinstance(emb, str):
                 import json
                 emb = json.loads(emb)
+            
+            # Extract new fields
+            social_profiles = prow.get("social_profiles")
+            if isinstance(social_profiles, str):
+                import json
+                try:
+                    social_profiles = json.loads(social_profiles)
+                except Exception:
+                    social_profiles = {}
+                    
             db_data["persons"][pid] = {
                 "representative_embedding": emb or [],
-                "photos": person_photos_map.get(pid, [])
+                "photos": person_photos_map.get(pid, []),
+                "display_name": prow.get("display_name") or "",
+                "social_profiles": social_profiles or {},
+                "consent": prow.get("consent") if prow.get("consent") is not None else True,
+                "created_at": prow.get("created_at") or "",
+                "updated_at": prow.get("updated_at") or ""
             }
 
         # 3. Fetch Couple Photos
@@ -211,7 +226,10 @@ def save_db_to_supabase(db_data: Dict[str, Any]) -> bool:
             emb = pdata.get("representative_embedding", [])
             client.table("persons").upsert({
                 "id": pid,
-                "representative_embedding": emb
+                "representative_embedding": emb,
+                "display_name": pdata.get("display_name") or "",
+                "social_profiles": pdata.get("social_profiles") or {},
+                "consent": pdata.get("consent") if pdata.get("consent") is not None else True
             }).execute()
 
             # Replace person_photos for this pid

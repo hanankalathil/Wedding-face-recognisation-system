@@ -342,6 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <i class="fa-solid fa-check"></i> Save
                                         </button>
                                     </div>
+                                    <p style="font-size: 0.75rem; color: #a3b3c6; opacity: 0.8; margin-top: 8px; margin-bottom: 0; text-align: left;">
+                                        * By saving your name, you consent to face-recognition matching in the gallery.
+                                    </p>
                                 </div>
                             </div>
                         `;
@@ -371,7 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                             person_id: person.id,
-                                            display_name: enteredName
+                                            display_name: enteredName,
+                                            consent: true
                                         })
                                     });
                                     

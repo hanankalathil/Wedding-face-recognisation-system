@@ -22,7 +22,7 @@
                 sessionStorage.removeItem('admin_token');
                 sessionStorage.removeItem('admin_user');
                 localStorage.removeItem('admin_token');
-                window.location.href = '/admin-login.html';
+                window.location.href = '/admin-login';
             }
         }
         
@@ -50,7 +50,7 @@
 async function verifyAdminSessionOnLoad() {
     const token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_token');
     if (!token) {
-        window.location.href = '/admin-login.html';
+        window.location.href = '/admin-login';
         return;
     }
     try {
@@ -59,7 +59,7 @@ async function verifyAdminSessionOnLoad() {
             sessionStorage.removeItem('admin_token');
             sessionStorage.removeItem('admin_user');
             localStorage.removeItem('admin_token');
-            window.location.href = '/admin-login.html';
+            window.location.href = '/admin-login';
         }
     } catch (e) {
         console.error('Admin session verification error:', e);
@@ -104,7 +104,10 @@ document.addEventListener('DOMContentLoaded', () => {
             sessionStorage.removeItem('admin_token');
             sessionStorage.removeItem('admin_user');
             localStorage.removeItem('admin_token');
-            window.location.href = '/admin-login.html';
+            localStorage.removeItem('admin_refresh_token');
+            localStorage.removeItem('admin_user');
+            document.cookie = "admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+            window.location.href = '/admin-login';
         });
     }
 
@@ -154,6 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
+            
+            // Clear search fields on tab switch
+            const globalSearchInput = document.getElementById('globalSearchInput');
+            if (globalSearchInput) globalSearchInput.value = '';
+            const tableSearchInput = document.getElementById('tableSearchInput');
+            if (tableSearchInput) tableSearchInput.value = '';
+
             // Remove active from all nav items
             navItems.forEach(nav => nav.classList.remove('active'));
             // Add active to clicked nav item
@@ -231,6 +241,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let lastPhotosDataStr = '';
+    let latestPhotosList = [];
+
+    const tableSearchInput = document.getElementById('tableSearchInput');
+    if (tableSearchInput) {
+        tableSearchInput.addEventListener('input', () => {
+            renderTable(latestPhotosList);
+        });
+    }
+
+    const globalSearchInput = document.getElementById('globalSearchInput');
+    if (globalSearchInput) {
+        globalSearchInput.addEventListener('input', () => {
+            const activeTabEl = document.querySelector('.nav-item.active');
+            if (!activeTabEl) return;
+            const activeTabId = activeTabEl.getAttribute('data-tab');
+
+            if (activeTabId === 'dashboard') {
+                if (tableSearchInput) {
+                    tableSearchInput.value = globalSearchInput.value;
+                }
+                renderTable(latestPhotosList);
+            } else if (activeTabId === 'users') {
+                renderUsersTab(currentUsersList);
+            } else if (activeTabId === 'analysis-images') {
+                renderImagesTab(currentPhotosList);
+            } else if (activeTabId === 'couple-photos') {
+                renderCouplePhotos();
+            }
+        });
+    }
+
     async function fetchRealData(force = false) {
         // Display animated loading indicators while fetching
         const statImages = document.getElementById('statImages');
@@ -238,34 +279,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const isInitialLoad = !lastPhotosDataStr;
 
         if (force || isInitialLoad) {
-            if (statImages) statImages.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:#d4af37;"></i>';
-            if (statUsers) statUsers.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:#d4af37;"></i>';
+            if (statImages) statImages.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:var(--secondary);"></i>';
+            if (statUsers) statUsers.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size:16px; color:var(--secondary);"></i>';
             showTableSkeleton(5);
             showSkeletonGrid('usersGrid', 4, 'user');
             showSkeletonGrid('imagesGrid', 6, 'photo');
         }
 
         try {
-            const [photosRes, usersRes] = await Promise.all([
+            const [photosRes, usersRes, sessionsRes] = await Promise.all([
                 fetch(`/api/admin/photos`),
-                fetch(`/api/admin/all-users`)
+                fetch(`/api/admin/all-users`),
+                fetch(`/api/admin/sessions/count`).catch(err => {
+                    console.warn('Failed to fetch sessions count, fallback to 1', err);
+                    return { json: () => Promise.resolve({ count: 1 }) };
+                })
             ]);
 
             const photosData = await photosRes.json();
             const usersData = await usersRes.json();
+            let sessionsCount = 1;
+            try {
+                const sessionsData = await sessionsRes.json();
+                sessionsCount = sessionsData.count || 1;
+            } catch (e) {}
             
             if (photosData.status === 'success') {
                 const galleryPhotos = photosData.photos.filter(p => p.filename !== 'avatar.jpg' && !p.path.endsWith('/avatar.jpg'));
                 const usersList = (usersData.status === 'success') ? usersData.users : [];
                 
-                const dataStr = JSON.stringify(galleryPhotos) + JSON.stringify(usersList);
+                const dataStr = JSON.stringify(galleryPhotos) + JSON.stringify(usersList) + sessionsCount;
                 if (!force && dataStr === lastPhotosDataStr) return; // Skip DOM update if no change
                 lastPhotosDataStr = dataStr;
                 
+                latestPhotosList = galleryPhotos;
                 renderTable(galleryPhotos);
                 renderImagesTab(galleryPhotos);
                 renderUsersTab(usersList);
-                updateStats(galleryPhotos, usersList);
+                updateStats(galleryPhotos, usersList, sessionsCount);
+                updateActivityGraph(galleryPhotos);
+                updateSystemHealth(galleryPhotos, usersList);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -277,30 +330,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderTable(photos) {
+        latestPhotosList = photos || [];
         tableBody.innerHTML = '';
-        const recentPhotos = photos.slice(0, 10); // Show only recent 10 in dashboard
+        
+        let filteredPhotos = latestPhotosList;
+        if (tableSearchInput) {
+            const searchVal = tableSearchInput.value.toLowerCase().trim();
+            if (searchVal) {
+                filteredPhotos = latestPhotosList.filter(p => p.filename.toLowerCase().includes(searchVal));
+            }
+        }
+        
+        const recentPhotos = filteredPhotos.slice(0, 10); // Show only recent 10 in dashboard
         
         recentPhotos.forEach((photo, index) => {
             const tr = document.createElement('tr');
+            const timeStr = photo.created_at ? formatTimeAgo(photo.created_at) : 'Recent';
+            
             tr.innerHTML = `
                 <td style="font-family: monospace; color: var(--text-muted);">#IMG-${index+1}</td>
                 <td>
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="${photo.url}" alt="${photo.filename}" class="thumbnail" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover; background: #2a2d3e;">
-                        <span style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${photo.filename}</span>
+                        <img src="${photo.url}" alt="${photo.filename}" class="table-thumbnail" onclick="openLightbox('${photo.url}', '${photo.filename}')">
+                        <span style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;" onclick="openLightbox('${photo.url}', '${photo.filename}')">${photo.filename}</span>
                     </div>
                 </td>
-                <td style="color: var(--text-muted);">Recent</td>
+                <td style="color: var(--text-muted);">${timeStr}</td>
                 <td>
-                    <span class="status-badge status-success">Analyzed</span>
+                    <span class="status-pill status-pill-online" style="font-size: 0.75rem; padding: 4px 10px;">Analyzed</span>
                 </td>
-                <td><strong>N/A</strong></td>
+                <td>
+                    <button class="row-action-btn" onclick="deletePhotoFromDashboard('${photo.path}', this)">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; display: inline-block; vertical-align: middle;">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Delete
+                    </button>
+                </td>
             `;
             tableBody.appendChild(tr);
         });
         
         if (recentPhotos.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">No analyses found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--text-muted);">No matching analyses found.</td></tr>';
         }
     }
 
@@ -328,10 +401,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderImagesTab(photos) {
         const imagesGrid = document.getElementById('imagesGrid');
         if (!imagesGrid) return;
-        currentPhotosList = photos || [];
+        currentPhotosList = photos || currentPhotosList || [];
         imagesGrid.innerHTML = '';
         
-        const visiblePhotos = currentPhotosList.slice(0, visibleImagesCount);
+        let filteredPhotos = currentPhotosList;
+        const globalSearchVal = document.getElementById('globalSearchInput')?.value.toLowerCase().trim() || '';
+        if (globalSearchVal) {
+            filteredPhotos = currentPhotosList.filter(photo => 
+                (photo.filename && photo.filename.toLowerCase().includes(globalSearchVal))
+            );
+        }
+        
+        const visiblePhotos = filteredPhotos.slice(0, visibleImagesCount);
         
         visiblePhotos.forEach(photo => {
             const div = document.createElement('div');
@@ -409,10 +490,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderUsersTab(usersList) {
         const usersGrid = document.getElementById('usersGrid');
         if (!usersGrid) return;
-        currentUsersList = usersList || [];
+        currentUsersList = usersList || currentUsersList || [];
         usersGrid.innerHTML = '';
         
-        const visibleUsers = currentUsersList.slice(0, visibleUsersCount);
+        let filteredUsers = currentUsersList;
+        const globalSearchVal = document.getElementById('globalSearchInput')?.value.toLowerCase().trim() || '';
+        if (globalSearchVal) {
+            filteredUsers = currentUsersList.filter(user => {
+                const displayName = (user.display_name || 'Unnamed Guest').toLowerCase();
+                const userId = (user.id || '').toLowerCase();
+                return displayName.includes(globalSearchVal) || userId.includes(globalSearchVal);
+            });
+        }
+        
+        const visibleUsers = filteredUsers.slice(0, visibleUsersCount);
         
         visibleUsers.forEach(user => {
             const userName = user.id;
@@ -434,6 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 socialHtml += `<a href="${liUrl}" target="_blank" rel="noopener noreferrer" class="social-badge social-badge-sm linkedin" title="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>`;
             }
             
+            const consentStatus = user.consent !== false;
+            const consentBadge = consentStatus
+                ? `<span style="font-size: 0.7rem; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block; margin-top: 4px;"><i class="fa-solid fa-circle-check"></i> Consented</span>`
+                : `<span style="font-size: 0.7rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600; display: inline-block; margin-top: 4px;"><i class="fa-solid fa-circle-xmark"></i> No Consent</span>`;
+
             const div = document.createElement('div');
             div.style.cssText = 'background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; cursor: pointer;';
             div.addEventListener('click', () => {
@@ -454,6 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-light); word-break: break-all;">${displayName || 'Unnamed Guest'}</h3>
                 ${displayName ? `<span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 2px;">(${userName})</span>` : `<span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 2px;">${userName}</span>`}
                 <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 6px;">${user.photo_count} photo${user.photo_count === 1 ? '' : 's'}</span>
+                <div style="margin-top: 2px;">${consentBadge}</div>
                 ${socialHtml ? `<div class="user-card-social" style="margin-top: 8px; display: flex; gap: 6px; justify-content: center;">${socialHtml}</div>` : ''}
                 <button class="btn-edit-profile" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 0.75rem; background: rgba(197, 168, 128, 0.12); border: 1px solid rgba(197, 168, 128, 0.25); border-radius: 6px; color: var(--color-primary, #C5A880); cursor: pointer; transition: all 0.2s ease;" title="Edit Profile">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; vertical-align: middle;">
@@ -526,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileInstagram = document.getElementById('profileInstagram');
     const profileFacebook = document.getElementById('profileFacebook');
     const profileLinkedin = document.getElementById('profileLinkedin');
+    const profileConsent = document.getElementById('profileConsent');
     const profileCancelBtn = document.getElementById('profileCancelBtn');
     const profileSaveBtn = document.getElementById('profileSaveBtn');
 
@@ -537,6 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileInstagram.value = '';
         profileFacebook.value = '';
         profileLinkedin.value = '';
+        if (profileConsent) profileConsent.checked = true;
 
         try {
             const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
@@ -551,6 +650,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 profileInstagram.value = socials.instagram || '';
                 profileFacebook.value = socials.facebook || '';
                 profileLinkedin.value = socials.linkedin || '';
+                if (profileConsent) {
+                    profileConsent.checked = profile.consent !== false;
+                }
             }
         } catch (e) {
             console.error('Failed to load profile:', e);
@@ -593,7 +695,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         display_name: profileDisplayName.value.trim(),
                         instagram: profileInstagram.value.trim(),
                         facebook: profileFacebook.value.trim(),
-                        linkedin: profileLinkedin.value.trim()
+                        linkedin: profileLinkedin.value.trim(),
+                        consent: profileConsent ? profileConsent.checked : true
                     })
                 });
 
@@ -616,12 +719,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function updateStats(photos, usersList) {
+    function updateStats(photos, usersList, sessionsCount = 1) {
         const statImages = document.getElementById('statImages');
         if (statImages) statImages.textContent = photos.length;
         
         const statUsers = document.getElementById('statUsers');
         if (statUsers) statUsers.textContent = usersList ? usersList.length : 0;
+
+        const statSessions = document.getElementById('statSessions');
+        if (statSessions) statSessions.textContent = sessionsCount;
     }
 
 
@@ -2259,9 +2365,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!couplePhotosGrid) return;
         couplePhotosGrid.innerHTML = '';
         
-        const filteredPhotos = currentCoupleFilter === 'all'
+        let filteredPhotos = currentCoupleFilter === 'all'
             ? couplePhotosData
             : couplePhotosData.filter(p => p.category === currentCoupleFilter);
+
+        const globalSearchVal = document.getElementById('globalSearchInput')?.value.toLowerCase().trim() || '';
+        if (globalSearchVal) {
+            filteredPhotos = filteredPhotos.filter(photo => 
+                (photo.filename && photo.filename.toLowerCase().includes(globalSearchVal))
+            );
+        }
 
         filteredPhotos.forEach(photo => {
             const div = document.createElement('div');
@@ -2895,7 +3008,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chips.forEach(c => c.classList.remove('active'));
                 e.currentTarget.classList.add('active');
                 currentCoupleFilter = e.currentTarget.getAttribute('data-filter');
-                if (typeof fetchCouplePhotos === 'function') fetchCouplePhotos();
+                if (typeof renderCouplePhotos === 'function') renderCouplePhotos();
             });
         });
     }
@@ -3016,10 +3129,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsForm = document.getElementById('settingsForm');
     const partner1Input = document.getElementById('partner1Input');
     const partner2Input = document.getElementById('partner2Input');
+    const siteTitlePreview = document.getElementById('siteTitlePreview');
+
+    function updateSiteTitlePreview() {
+        if (!siteTitlePreview) return;
+        const p1 = partner1Input ? partner1Input.value.trim() : '';
+        const p2 = partner2Input ? partner2Input.value.trim() : '';
+        if (p1 && p2) {
+            siteTitlePreview.textContent = `${p1} & ${p2}`;
+        } else if (p1) {
+            siteTitlePreview.textContent = p1;
+        } else if (p2) {
+            siteTitlePreview.textContent = p2;
+        } else {
+            siteTitlePreview.textContent = "Bride & Groom";
+        }
+    }
+
+    if (partner1Input) partner1Input.addEventListener('input', updateSiteTitlePreview);
+    if (partner2Input) partner2Input.addEventListener('input', updateSiteTitlePreview);
 
     async function fetchSettings() {
         try {
-            const res = await fetch('/api/admin/couple-settings');
+            const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+            const res = await fetch('/api/admin/couple-settings', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await res.json();
             if (data.status === 'success' && data.settings) {
                 const coupleName = data.settings.couple_name || '';
@@ -3039,6 +3174,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         partner1Input.value = coupleName;
                         partner2Input.value = '';
                     }
+                    updateSiteTitlePreview();
                 }
             }
         } catch (err) {
@@ -3057,10 +3193,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const name = p2 ? `${p1} & ${p2}` : p1;
 
+            const saveBtn = document.getElementById('saveSettingsBtn') || settingsForm.querySelector('button[type="submit"]');
+            let originalText = '';
+            if (saveBtn) {
+                originalText = saveBtn.innerHTML;
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = `<span class="spinner-ring"></span><span>Saving...</span>`;
+            }
+
             try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
                 const res = await fetch('/api/admin/couple-settings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({ couple_name: name })
                 });
 
@@ -3074,6 +3222,394 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('Error saving settings:', err);
                 showCustomAlert('Error saving settings');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalText;
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // --- Storage settings & Migration Logic ---
+    // ==========================================
+    const activeStorageMode = document.getElementById('activeStorageMode');
+    const startMigrationBtn = document.getElementById('startMigrationBtn');
+
+    async function fetchStorageStatus() {
+        try {
+            const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+            const res = await fetch('/api/admin/storage/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (activeStorageMode) {
+                activeStorageMode.textContent = data.storage_mode.toUpperCase();
+                if (data.storage_mode === 'supabase') {
+                    activeStorageMode.className = 'status-pill status-pill-supabase';
+                } else {
+                    activeStorageMode.className = 'status-pill status-pill-local';
+                }
+                activeStorageMode.style.color = ''; // Clear inline styles
+            }
+            if (startMigrationBtn) {
+                if (!data.supabase_configured) {
+                    startMigrationBtn.disabled = true;
+                    startMigrationBtn.title = "Configure Supabase in your environment first.";
+                    startMigrationBtn.style.opacity = '0.5';
+                    startMigrationBtn.style.cursor = 'not-allowed';
+                } else {
+                    startMigrationBtn.disabled = false;
+                    startMigrationBtn.style.opacity = '1';
+                    startMigrationBtn.style.cursor = 'pointer';
+                }
+            }
+            // Update Cloudflare Tunnel Link card
+            const cloudflareUrlCard = document.getElementById('cloudflareUrlCard');
+            const statCloudflareUrl = document.getElementById('statCloudflareUrl');
+            if (cloudflareUrlCard && statCloudflareUrl) {
+                if (data.cloudflare_url) {
+                    cloudflareUrlCard.style.display = 'flex';
+                    const fullUrl = data.cloudflare_url.endsWith('/') 
+                        ? `${data.cloudflare_url}find-my-photos` 
+                        : `${data.cloudflare_url}/find-my-photos`;
+                    statCloudflareUrl.innerHTML = `
+                        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                            <a href="${fullUrl}" target="_blank" style="color: var(--secondary); text-decoration: none; font-weight: 700; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px; width: fit-content;" title="Visit Public Site">
+                                Visit Live Site 
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="7" y1="17" x2="17" y2="7"></line>
+                                    <polyline points="7 7 17 7 17 17"></polyline>
+                                </svg>
+                            </a>
+                            <button onclick="copyTunnelUrl('${fullUrl}', this)" style="background: rgba(20, 184, 166, 0.08); border: 1px solid rgba(20, 184, 166, 0.18); color: var(--secondary); padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: fit-content; transition: all 0.2s; font-weight: 600;">
+                                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span>Copy Link</span>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    cloudflareUrlCard.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching storage status:', err);
+        }
+    }
+
+    if (startMigrationBtn) {
+        startMigrationBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to copy all local gallery photos and database metadata to Supabase? This run is non-destructive (local files remain on disk).")) {
+                return;
+            }
+            
+            const originalHTML = startMigrationBtn.innerHTML;
+            startMigrationBtn.disabled = true;
+            startMigrationBtn.innerHTML = `<span class="spinner-ring"></span><span>Migrating...</span>`;
+            
+            try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+                const res = await fetch('/api/admin/storage/migrate', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showCustomAlert('Migration started in backend successfully! Check backend console/logs for progress.');
+                } else {
+                    showCustomAlert(data.detail || 'Migration failed to start.');
+                }
+            } catch (err) {
+                console.error('Migration error:', err);
+                showCustomAlert('Error starting migration.');
+            } finally {
+                startMigrationBtn.disabled = false;
+                startMigrationBtn.innerHTML = originalHTML;
+                fetchStorageStatus();
+            }
+        });
+    }
+
+    // ==========================================
+    // --- Cloudflare Tunnel Management Logic ---
+    // ==========================================
+    const tunnelStatusText = document.getElementById('tunnelStatusText');
+    const tunnelStatusBadge = document.getElementById('tunnelStatusBadge');
+    const tunnelUrlContainer = document.getElementById('tunnelUrlContainer');
+    const tunnelUrlVal = document.getElementById('tunnelUrlVal');
+    const toggleTunnelBtn = document.getElementById('toggleTunnelBtn');
+
+    async function fetchTunnelStatus() {
+        try {
+            const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+            const res = await fetch('/api/admin/tunnel/status', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const cloudflareUrlCard = document.getElementById('cloudflareUrlCard');
+            const statCloudflareUrl = document.getElementById('statCloudflareUrl');
+            
+            if (tunnelStatusText && toggleTunnelBtn) {
+                if (data.status === 'online') {
+                    tunnelStatusText.textContent = 'ONLINE';
+                    if (tunnelStatusBadge) tunnelStatusBadge.className = 'status-pill status-pill-online';
+                    toggleTunnelBtn.innerHTML = '<span>Stop Cloudflare Tunnel</span>';
+                    toggleTunnelBtn.style.background = 'rgba(239, 68, 68, 0.08)';
+                    toggleTunnelBtn.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+                    toggleTunnelBtn.style.color = '#f87171';
+                    
+                    if (tunnelUrlContainer && tunnelUrlVal && data.url) {
+                        tunnelUrlContainer.style.display = 'block';
+                        const fullUrl = data.url.endsWith('/') ? `${data.url}find-my-photos` : `${data.url}/find-my-photos`;
+                        tunnelUrlVal.href = fullUrl;
+                        tunnelUrlVal.textContent = fullUrl;
+                        
+                        // Show and update dashboard banner in real-time
+                        if (cloudflareUrlCard && statCloudflareUrl) {
+                            cloudflareUrlCard.style.display = 'flex';
+                            statCloudflareUrl.innerHTML = `
+                                <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                                    <a href="${fullUrl}" target="_blank" style="color: var(--secondary); text-decoration: none; font-weight: 700; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 6px; width: fit-content;" title="Visit Public Site">
+                                        Visit Live Site 
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="7" y1="17" x2="17" y2="7"></line>
+                                            <polyline points="7 7 17 7 17 17"></polyline>
+                                        </svg>
+                                    </a>
+                                    <button onclick="copyTunnelUrl('${fullUrl}', this)" style="background: rgba(20, 184, 166, 0.08); border: 1px solid rgba(20, 184, 166, 0.18); color: var(--secondary); padding: 5px 10px; border-radius: 6px; font-size: 0.72rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: fit-content; transition: all 0.2s; font-weight: 600;">
+                                        <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                        <span>Copy Link</span>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    tunnelStatusText.textContent = 'OFFLINE';
+                    if (tunnelStatusBadge) tunnelStatusBadge.className = 'status-pill status-pill-offline';
+                    toggleTunnelBtn.innerHTML = '<span>Start Cloudflare Tunnel</span>';
+                    toggleTunnelBtn.style.background = '';
+                    toggleTunnelBtn.style.border = '';
+                    toggleTunnelBtn.style.color = '';
+                    if (tunnelUrlContainer) {
+                        tunnelUrlContainer.style.display = 'none';
+                    }
+                    
+                    // Hide dashboard banner in real-time
+                    if (cloudflareUrlCard) {
+                        cloudflareUrlCard.style.display = 'none';
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching tunnel status:', err);
+        }
+    }
+
+    // Cloudflare Tunnel Logs Modal Elements
+    const tunnelLogModal = document.getElementById('tunnelLogModal');
+    const closeTunnelLogModalBtn = document.getElementById('closeTunnelLogModalBtn');
+    const closeTunnelLogFooterBtn = document.getElementById('closeTunnelLogFooterBtn');
+    const terminalLogBody = document.getElementById('terminalLogBody');
+    const logModalStatusBadge = document.getElementById('logModalStatusBadge');
+    const logModalStatusText = document.getElementById('logModalStatusText');
+    const logModalSpinner = document.getElementById('logModalSpinner');
+    const logModalSuccessCard = document.getElementById('logModalSuccessCard');
+    const logModalUrlVal = document.getElementById('logModalUrlVal');
+
+    let tunnelLogEventSource = null;
+
+    function closeLogModal() {
+        if (tunnelLogEventSource) {
+            tunnelLogEventSource.close();
+            tunnelLogEventSource = null;
+        }
+        if (tunnelLogModal) {
+            tunnelLogModal.classList.add('hidden');
+        }
+        fetchTunnelStatus();
+    }
+
+    if (closeTunnelLogModalBtn) closeTunnelLogModalBtn.addEventListener('click', closeLogModal);
+    if (closeTunnelLogFooterBtn) closeTunnelLogFooterBtn.addEventListener('click', closeLogModal);
+
+    function appendTerminalLog(text) {
+        if (!terminalLogBody) return;
+        
+        let timePart = '';
+        let levelPart = '';
+        let messagePart = text;
+        
+        const cfLogRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+(INF|ERR|WRN)\s+(.*)$/;
+        const match = text.match(cfLogRegex);
+        
+        const logLineDiv = document.createElement('div');
+        logLineDiv.className = 'log-line';
+        
+        if (match) {
+            const [, timestamp, level, msg] = match;
+            const tMatch = timestamp.match(/T(\d{2}:\d{2}:\d{2})Z/);
+            timePart = tMatch ? tMatch[1] : timestamp;
+            levelPart = level;
+            messagePart = msg;
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = `[${timePart}]`;
+            logLineDiv.appendChild(timeSpan);
+            
+            const levelSpan = document.createElement('span');
+            levelSpan.className = `log-level-${level.toLowerCase() === 'wrn' ? 'inf' : level.toLowerCase()}`;
+            levelSpan.textContent = `${level}: `;
+            logLineDiv.appendChild(levelSpan);
+        } else if (text.startsWith('[System]')) {
+            const systemSpan = document.createElement('span');
+            systemSpan.className = 'log-level-sys';
+            systemSpan.textContent = '[System] ';
+            logLineDiv.appendChild(systemSpan);
+            messagePart = text.replace('[System]', '').trim();
+        }
+        
+        // Match trycloudflare URL and highlight it
+        const urlRegex = /(https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com)/;
+        const urlMatch = messagePart.match(urlRegex);
+        if (urlMatch) {
+            const url = urlMatch[1];
+            const parts = messagePart.split(url);
+            
+            const beforeText = document.createTextNode(parts[0]);
+            logLineDiv.appendChild(beforeText);
+            
+            const urlLink = document.createElement('a');
+            urlLink.className = 'log-highlight-url';
+            urlLink.href = url;
+            urlLink.target = '_blank';
+            urlLink.textContent = url;
+            logLineDiv.appendChild(urlLink);
+            
+            if (parts[1]) {
+                const afterText = document.createTextNode(parts[1]);
+                logLineDiv.appendChild(afterText);
+            }
+            
+            handleTunnelConnected(url);
+        } else {
+            const textNode = document.createTextNode(messagePart);
+            logLineDiv.appendChild(textNode);
+        }
+        
+        terminalLogBody.appendChild(logLineDiv);
+        
+        const terminalContainer = terminalLogBody.parentElement;
+        if (terminalContainer) {
+            terminalContainer.scrollTop = terminalContainer.scrollHeight;
+        }
+    }
+
+    function handleTunnelConnected(url) {
+        if (logModalStatusText) logModalStatusText.textContent = 'ONLINE';
+        if (logModalStatusBadge) logModalStatusBadge.className = 'status-pill status-pill-online';
+        if (logModalSpinner) logModalSpinner.style.display = 'none';
+        
+        if (logModalSuccessCard && logModalUrlVal) {
+            logModalSuccessCard.style.display = 'block';
+            const fullUrl = url.endsWith('/') ? `${url}find-my-photos` : `${url}/find-my-photos`;
+            logModalUrlVal.href = fullUrl;
+            logModalUrlVal.textContent = fullUrl;
+        }
+        
+        fetchTunnelStatus();
+    }
+
+    if (toggleTunnelBtn) {
+        toggleTunnelBtn.addEventListener('click', async () => {
+            const isOnline = tunnelStatusText && tunnelStatusText.textContent === 'ONLINE';
+            const action = isOnline ? 'stop' : 'start';
+            
+            toggleTunnelBtn.disabled = true;
+            toggleTunnelBtn.innerHTML = `<span class="spinner-ring"></span><span>${isOnline ? 'Stopping Tunnel...' : 'Starting Tunnel...'}</span>`;
+            
+            if (action === 'start') {
+                if (terminalLogBody) terminalLogBody.innerHTML = '';
+                if (logModalSuccessCard) logModalSuccessCard.style.display = 'none';
+                if (logModalSpinner) logModalSpinner.style.display = 'block';
+                if (logModalStatusText) logModalStatusText.textContent = 'CONNECTING';
+                if (logModalStatusBadge) logModalStatusBadge.className = 'status-pill status-pill-offline';
+                
+                if (tunnelLogModal) {
+                    tunnelLogModal.classList.remove('hidden');
+                }
+                
+                appendTerminalLog('[System] Launching Cloudflare Tunnel process...');
+            }
+            
+            try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+                const res = await fetch('/api/admin/tunnel/toggle', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ action })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (action === 'stop') {
+                        showCustomAlert(data.message);
+                        if (tunnelLogEventSource) {
+                            tunnelLogEventSource.close();
+                            tunnelLogEventSource = null;
+                        }
+                    } else {
+                        appendTerminalLog('[System] Backend process started. Awaiting connection establishment...');
+                        
+                        // Start SSE logs streaming AFTER the toggle POST succeeds (ensures log files are already cleared)
+                        if (tunnelLogEventSource) {
+                            tunnelLogEventSource.close();
+                        }
+                        
+                        tunnelLogEventSource = new EventSource(`/api/admin/tunnel/logs?token=${token}`);
+                        
+                        tunnelLogEventSource.onmessage = (event) => {
+                            appendTerminalLog(event.data);
+                        };
+                        
+                        tunnelLogEventSource.onerror = (err) => {
+                            console.error('EventSource error:', err);
+                            appendTerminalLog('[System] Error receiving log stream. Reconnecting...');
+                        };
+                    }
+                } else {
+                    if (action === 'start') {
+                        appendTerminalLog(`[System] Error starting tunnel: ${data.detail || 'Unknown error'}`);
+                        if (logModalSpinner) logModalSpinner.style.display = 'none';
+                        if (logModalStatusText) logModalStatusText.textContent = 'ERROR';
+                    } else {
+                        showCustomAlert(data.detail || 'Failed to toggle tunnel');
+                    }
+                }
+            } catch (err) {
+                console.error('Tunnel toggle error:', err);
+                if (action === 'start') {
+                    appendTerminalLog('[System] Network error occurred while triggering tunnel startup.');
+                    if (logModalSpinner) logModalSpinner.style.display = 'none';
+                    if (logModalStatusText) logModalStatusText.textContent = 'ERROR';
+                } else {
+                    showCustomAlert('Error toggling tunnel status');
+                }
+            } finally {
+                toggleTunnelBtn.disabled = false;
+                if (action === 'stop') {
+                    setTimeout(fetchTunnelStatus, 1000);
+                }
             }
         });
     }
@@ -3170,12 +3706,220 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load dynamic settings on start
     fetchSettings();
+    fetchStorageStatus();
+    fetchTunnelStatus();
+
+    // ==========================================
+    // --- Dashboard Utilities & Lightbox Logic ---
+    // ==========================================
+    function formatTimeAgo(timestamp) {
+        if (!timestamp) return 'Recent';
+        const ms = timestamp * 1000;
+        const now = Date.now();
+        const diffSecs = Math.floor((now - ms) / 1000);
+        
+        if (diffSecs < 0 || diffSecs < 60) return 'Just now';
+        
+        const diffMins = Math.floor(diffSecs / 60);
+        if (diffMins < 60) return `${diffMins}m ago`;
+        
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        const dateObj = new Date(ms);
+        return dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function updateActivityGraph(photos) {
+        const svg = document.getElementById('activityGraph');
+        const areaPath = document.getElementById('graphAreaPath');
+        const linePath = document.getElementById('graphLinePath');
+        const subText = document.getElementById('graphSubText');
+        if (!svg || !areaPath || !linePath) return;
+
+        if (!photos || photos.length === 0) {
+            linePath.setAttribute('d', 'M 0 60 L 500 60');
+            areaPath.setAttribute('d', 'M 0 60 L 500 60 L 500 120 L 0 120 Z');
+            if (subText) subText.textContent = 'No upload activity recorded';
+            return;
+        }
+
+        const now = Date.now();
+        const minTime = Math.min(...photos.map(p => p.created_at || 0)) * 1000;
+        const totalDuration = now - minTime;
+        
+        let bins = [0, 0, 0, 0, 0, 0, 0, 0];
+        let label = 'Recent upload volume';
+
+        if (totalDuration < 24 * 60 * 60 * 1000) {
+            label = 'Analyses in the last 24 hours';
+            photos.forEach(p => {
+                const ageMs = now - ((p.created_at || 0) * 1000);
+                const ageHours = ageMs / (1000 * 60 * 60);
+                const binIdx = 7 - Math.floor(ageHours / 3);
+                if (binIdx >= 0 && binIdx < 8) {
+                    bins[binIdx]++;
+                }
+            });
+        } else {
+            label = 'Uploads in the last 8 days';
+            photos.forEach(p => {
+                const ageMs = now - ((p.created_at || 0) * 1000);
+                const ageDays = ageMs / (1000 * 60 * 60 * 24);
+                const binIdx = 7 - Math.floor(ageDays);
+                if (binIdx >= 0 && binIdx < 8) {
+                    bins[binIdx]++;
+                }
+            });
+        }
+
+        if (subText) subText.textContent = label;
+
+        const maxVal = Math.max(...bins, 1);
+        const points = [];
+        
+        for (let i = 0; i < 8; i++) {
+            const x = (i * 500) / 7;
+            const y = 100 - ((bins[i] / maxVal) * 80);
+            points.push({ x, y });
+        }
+
+        let dLine = `M ${points[0].x} ${points[0].y}`;
+        for (let i = 0; i < points.length - 1; i++) {
+            const p0 = points[i];
+            const p1 = points[i+1];
+            const cpX1 = p0.x + (p1.x - p0.x) / 2;
+            const cpY1 = p0.y;
+            const cpX2 = p0.x + (p1.x - p0.x) / 2;
+            const cpY2 = p1.y;
+            dLine += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+        }
+
+        const dArea = dLine + ` L 500 120 L 0 120 Z`;
+
+        linePath.setAttribute('d', dLine);
+        areaPath.setAttribute('d', dArea);
+    }
+
+    function updateSystemHealth(photos, users) {
+        const healthDbText = document.getElementById('healthDbText');
+        const healthWifiText = document.getElementById('healthWifiText');
+        const healthTunnelText = document.getElementById('healthTunnelText');
+
+        if (healthDbText) {
+            const activeModeEl = document.getElementById('activeStorageMode');
+            const activeMode = activeModeEl ? activeModeEl.textContent.trim().toUpperCase() : 'LOCAL';
+            if (activeMode.includes('SUPABASE')) {
+                healthDbText.innerHTML = `<span class="health-dot green"></span>Cloud (Supabase)`;
+            } else {
+                healthDbText.innerHTML = `<span class="health-dot green"></span>Local JSON`;
+            }
+        }
+
+        if (healthWifiText) {
+            const wifiBadge = document.getElementById('wifiStatusBadge');
+            if (wifiBadge && wifiBadge.textContent.trim().includes('Receiver Running')) {
+                healthWifiText.innerHTML = `<span class="health-dot green"></span>Active`;
+            } else {
+                healthWifiText.innerHTML = `<span class="health-dot red"></span>Stopped`;
+            }
+        }
+
+        if (healthTunnelText) {
+            const tunnelTextEl = document.getElementById('tunnelStatusText');
+            const tunnelText = tunnelTextEl ? tunnelTextEl.textContent.trim().toUpperCase() : 'OFFLINE';
+            if (tunnelText.includes('ONLINE')) {
+                healthTunnelText.innerHTML = `<span class="health-dot green"></span>Connected`;
+            } else {
+                healthTunnelText.innerHTML = `<span class="health-dot red"></span>Offline`;
+            }
+        }
+    }
+
+    const lightboxModal = document.getElementById('imageLightboxModal');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxFilename = document.getElementById('lightboxFilename');
+    const lightboxCloseBtn = document.getElementById('lightboxCloseBtn');
+
+    window.openLightbox = function(url, filename) {
+        if (!lightboxModal || !lightboxImg || !lightboxFilename) return;
+        lightboxImg.src = url;
+        lightboxFilename.textContent = filename || 'Preview';
+        lightboxModal.classList.add('active');
+    };
+
+    window.copyTunnelUrl = function(url, btn) {
+        navigator.clipboard.writeText(url).then(() => {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="11" height="11" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; display: inline-block; vertical-align: middle;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Copied!</span>
+            `;
+            btn.style.background = 'rgba(16, 185, 129, 0.15)';
+            btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            btn.style.color = '#34d399';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    };
+
+    window.deletePhotoFromDashboard = async function(photoPath, btn) {
+        if (await showCustomConfirm('Are you sure you want to delete this image?')) {
+            try {
+                const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+                const res = await fetch(`/api/admin/photos/delete`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ path: photoPath })
+                });
+                if (res.ok) {
+                    fetchRealData(true);
+                } else {
+                    const data = await res.json();
+                    showCustomAlert('Failed to delete photo: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Failed to delete photo: ', err);
+                showCustomAlert('Error deleting photo. Please try again.');
+            }
+        }
+    };
+
+    if (lightboxCloseBtn) {
+        lightboxCloseBtn.addEventListener('click', () => {
+            if (lightboxModal) lightboxModal.classList.remove('active');
+        });
+    }
+
+    if (lightboxModal) {
+        lightboxModal.addEventListener('click', (e) => {
+            if (e.target === lightboxModal) {
+                lightboxModal.classList.remove('active');
+            }
+        });
+    }
 
     // Start background live sync polling
     setInterval(() => {
         fetchRealData(false);
         fetchCouplePhotos(false);
         fetchCategoriesAndRefresh(false);
+        fetchTunnelStatus();
     }, 5000);
 
 });

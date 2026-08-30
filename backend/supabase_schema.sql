@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS persons (
     id TEXT PRIMARY KEY,
     representative_embedding JSONB NOT NULL,
     avatar_path TEXT,
+    display_name TEXT DEFAULT '',
+    social_profiles JSONB DEFAULT '{}'::jsonb,
+    consent BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

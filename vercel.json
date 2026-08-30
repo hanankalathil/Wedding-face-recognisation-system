@@ -1,4 +1,5 @@
 {
+  "cleanUrls": true,
   "routes": [
     {
       "src": "/api/(.*)",
@@ -15,6 +16,31 @@
     {
       "src": "/admin",
       "dest": "/api/index.py"
+    },
+    {
+      "src": "/index\\.html",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    },
+    {
+      "src": "/index",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    },
+    {
+      "src": "/(find-my-photos|gallery|contact|privacy|terms|admin-login)\\.html",
+      "status": 308,
+      "headers": {
+        "Location": "/$1"
+      }
+    },
+    {
+      "src": "/(find-my-photos|gallery|contact|privacy|terms|admin-login)",
+      "dest": "/frontend/$1.html"
     },
     {
       "src": "/frontend/(.*)",

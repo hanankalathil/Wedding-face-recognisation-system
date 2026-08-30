@@ -37,16 +37,83 @@ class AdminLoginRequest(BaseModel):
     password: str
 
 
+class AdminRefreshRequest(BaseModel):
+    refresh_token: str
+
+
 @public_router.post("/login")
 async def admin_login(payload: AdminLoginRequest):
     """Public login endpoint for wedding administrators."""
     return authenticate_supabase_user(payload.email, payload.password)
 
 
+@public_router.post("/refresh")
+async def admin_refresh_token(payload: AdminRefreshRequest):
+    """Public token refresh endpoint."""
+    from app.core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+    import requests
+    
+    url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/token?grant_type=refresh_token"
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "application/json"
+    }
+    req_payload = {
+        "refresh_token": payload.refresh_token
+    }
+    
+    try:
+        from app.core.auth import get_stable_session
+        response = get_stable_session().post(url, json=req_payload, headers=headers, timeout=10)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Failed to refresh session")
+            
+        data = response.json()
+        access_token = data.get("access_token")
+        new_refresh_token = data.get("refresh_token")
+        user = data.get("user", {})
+        user_email = user.get("email", "").strip().lower()
+        
+        # Check admin access
+        from app.core.config import ADMIN_EMAILS
+        if ADMIN_EMAILS and user_email not in ADMIN_EMAILS:
+            raise HTTPException(status_code=403, detail="Forbidden")
+            
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "expires_in": data.get("expires_in", 3600),
+            "user": {
+                "id": user.get("id"),
+                "email": user_email,
+                "role": "admin"
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Auth] Supabase refresh exception: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
 @router.get("/verify")
 async def verify_admin_session(current_user: dict = Depends(get_current_admin_user)):
     """Verifies that the client possesses a valid, active admin session."""
     return {"status": "authenticated", "user": current_user}
+
+
+@router.get("/sessions/count")
+async def get_active_sessions_count():
+    """Returns the count of current active admin sessions."""
+    from app.core.auth import SESSION_CACHE
+    import time
+    now = time.time()
+    expired_keys = [k for k, v in SESSION_CACHE.items() if now - v.get("cached_at", 0) > 86400]
+    for k in expired_keys:
+        SESSION_CACHE.pop(k, None)
+    count = max(1, len(SESSION_CACHE))
+    return {"count": count}
 
 
 
@@ -148,6 +215,7 @@ class UpdateProfileRequest(BaseModel):
     instagram: str = ""
     facebook: str = ""
     linkedin: str = ""
+    consent: bool = True
 
 @router.post("/upload")
 async def admin_upload_image(file: UploadFile = File(...)):
@@ -193,12 +261,16 @@ async def get_all_photos():
                         rel_path = file
                     else:
                         rel_path = f"{rel_dir}/{file}".replace("\\", "/")
+                    
+                    full_path = os.path.join(root, file)
+                    mtime = os.path.getmtime(full_path) if os.path.exists(full_path) else 0
                     photos.append({
                         "url": f"/gallery/{rel_path}",
                         "filename": file,
-                        "path": rel_path
+                        "path": rel_path,
+                        "created_at": mtime
                     })
-    photos.sort(key=lambda p: os.path.getmtime(os.path.join(GALLERY_DIR, p["path"])) if os.path.exists(os.path.join(GALLERY_DIR, p["path"])) else 0, reverse=True)
+    photos.sort(key=lambda p: p.get("created_at", 0), reverse=True)
     return {"status": "success", "photos": photos}
 
 
@@ -881,6 +953,7 @@ async def update_user_profile(req: UpdateProfileRequest):
         
         pdata = db["persons"][req.user_id]
         pdata["display_name"] = req.display_name.strip()
+        pdata["consent"] = req.consent
         pdata["social_profiles"] = {
             "instagram": req.instagram.strip().lstrip("@"),
             "facebook": req.facebook.strip(),
@@ -893,7 +966,8 @@ async def update_user_profile(req: UpdateProfileRequest):
             "message": f"Profile updated for {req.user_id}",
             "profile": {
                 "display_name": pdata["display_name"],
-                "social_profiles": pdata["social_profiles"]
+                "social_profiles": pdata["social_profiles"],
+                "consent": pdata["consent"]
             }
         }
     except HTTPException as he:
@@ -916,7 +990,8 @@ async def get_user_profile(person_id: str):
             "profile": {
                 "id": person_id,
                 "display_name": pdata.get("display_name", ""),
-                "social_profiles": pdata.get("social_profiles", {})
+                "social_profiles": pdata.get("social_profiles", {}),
+                "consent": pdata.get("consent", True) if pdata.get("consent") is not None else True
             }
         }
     except HTTPException as he:
@@ -970,3 +1045,199 @@ async def reset_system_for_new_wedding():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
+
+from typing import Optional
+
+def get_cloudflare_url() -> Optional[str]:
+    import re
+    # The project root directory is 4 levels up from this file
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    log_files = [
+        os.path.join(base_dir, "cloudflared.log"),
+        os.path.join(base_dir, "cloudflared_out.log")
+    ]
+    pattern = r"https://(?!api\.)[a-zA-Z0-9\-]+\.trycloudflare\.com"
+    for fp in log_files:
+        if os.path.exists(fp):
+            try:
+                with open(fp, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()
+                    matches = re.findall(pattern, content)
+                    if matches:
+                        return matches[-1]
+            except Exception as e:
+                print(f"[Storage API] Warning reading Cloudflare log {fp}: {e}")
+    return None
+
+class StorageStatusResponse(BaseModel):
+    storage_mode: str
+    supabase_configured: bool
+    cloudflare_url: Optional[str] = None
+
+@router.get("/storage/status", response_model=StorageStatusResponse)
+async def get_storage_status():
+    from app.core.config import STORAGE_MODE, is_supabase_enabled
+    return {
+        "storage_mode": STORAGE_MODE,
+        "supabase_configured": is_supabase_enabled(),
+        "cloudflare_url": get_cloudflare_url()
+    }
+
+@router.post("/storage/migrate")
+async def migrate_storage_endpoint(background_tasks: BackgroundTasks):
+    from app.core.config import is_supabase_enabled, GALLERY_DIR
+    if not is_supabase_enabled():
+        raise HTTPException(status_code=400, detail="Supabase is not configured. Please check your .env variables.")
+        
+    def do_migration():
+        try:
+            from app.services.storage_service import LocalStorageService, SupabaseStorageService
+            local_storage = LocalStorageService()
+            supabase_storage = SupabaseStorageService()
+            db_data = local_storage.load_database()
+            
+            # Upload local gallery
+            if os.path.exists(GALLERY_DIR):
+                for root, _, files in os.walk(GALLERY_DIR):
+                    for file_name in files:
+                        full_local_path = os.path.join(root, file_name)
+                        rel_path = os.path.relpath(full_local_path, GALLERY_DIR).replace("\\", "/")
+                        storage_path = f"gallery/{rel_path}"
+                        supabase_storage.upload_file(full_local_path, storage_path)
+            
+            # Sync DB
+            supabase_storage.save_database(db_data)
+            print("[Storage Migration] Completed migration to Supabase successfully.")
+        except Exception as e:
+            print(f"[Storage Migration] Error during migration: {e}")
+
+    background_tasks.add_task(do_migration)
+    return {"status": "success", "message": "Migration started in background. Local files are preserved."}
+
+def is_cloudflared_running():
+    import subprocess
+    try:
+        output = subprocess.check_output("tasklist", shell=True).decode('utf-8', errors='ignore').lower()
+        return "cloudflared.exe" in output or "cloudflared" in output
+    except Exception:
+        return False
+
+def kill_cloudflared():
+    import subprocess
+    try:
+        subprocess.call("taskkill /f /im cloudflared.exe", shell=True)
+    except Exception:
+        pass
+
+class TunnelToggleRequest(BaseModel):
+    action: str
+
+@router.get("/tunnel/status")
+async def get_tunnel_status():
+    running = is_cloudflared_running()
+    url = get_cloudflare_url() if running else None
+    return {
+        "status": "online" if running else "offline",
+        "url": url
+    }
+
+@router.post("/tunnel/toggle")
+async def toggle_tunnel(req: TunnelToggleRequest):
+    import subprocess
+    import time
+    action = req.action.strip().lower()
+    if action == "start":
+        # Force terminate any existing process to ensure a clean state and a new regenerated link
+        kill_cloudflared()
+        for _ in range(20):
+            if not is_cloudflared_running():
+                break
+            time.sleep(0.1)
+            
+        # Determine path of cloudflared.exe
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        cf_exe = os.path.join(base_dir, "cloudflared.exe")
+        
+        # Download if missing
+        if not os.path.exists(cf_exe):
+            import urllib.request
+            try:
+                print("Downloading cloudflared.exe...")
+                url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+                urllib.request.urlretrieve(url, cf_exe)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to download cloudflared.exe: {str(e)}")
+                
+        # Start cloudflared
+        log_out = os.path.join(base_dir, "cloudflared_out.log")
+        log_err = os.path.join(base_dir, "cloudflared.log")
+        
+        # Clean/truncate logs
+        for log_f in [log_out, log_err]:
+            try:
+                if os.path.exists(log_f):
+                    os.remove(log_f)
+            except Exception:
+                try:
+                    with open(log_f, "w") as f:
+                        f.truncate(0)
+                except Exception as e:
+                    print(f"[Tunnel] Error clearing log {log_f}: {e}")
+                    
+        try:
+            with open(log_out, "w") as out, open(log_err, "w") as err:
+                subprocess.Popen(
+                    [cf_exe, "tunnel", "--url", "http://localhost:8000"],
+                    stdout=out,
+                    stderr=err,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            return {"status": "success", "message": "Tunnel started."}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to start tunnel: {str(e)}")
+            
+    elif action == "stop":
+        kill_cloudflared()
+        return {"status": "success", "message": "Tunnel stopped successfully."}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'start' or 'stop'.")
+
+@router.get("/tunnel/logs")
+async def stream_tunnel_logs():
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    log_file = os.path.join(base_dir, "cloudflared.log")
+    
+    async def log_generator():
+        import asyncio
+        # Wait up to 5 seconds for log file to be created
+        for _ in range(50):
+            if os.path.exists(log_file):
+                break
+            await asyncio.sleep(0.1)
+            
+        if not os.path.exists(log_file):
+            yield "data: [System] Waiting for cloudflared.log to be initialized...\n\n"
+            return
+            
+        # Stream the log file
+        with open(log_file, "r", encoding="utf-8", errors="ignore") as f:
+            # Yield existing lines
+            for line in f:
+                yield f"data: {line.strip()}\n\n"
+                
+            # Yield new lines as they are written
+            consecutive_empty = 0
+            while True:
+                line = f.readline()
+                if line:
+                    consecutive_empty = 0
+                    yield f"data: {line.strip()}\n\n"
+                else:
+                    await asyncio.sleep(0.5)
+                    consecutive_empty += 1
+                    # If empty for 5 minutes, stop
+                    if consecutive_empty > 600:
+                        break
+
+    return StreamingResponse(log_generator(), media_type="text/event-stream")
+

@@ -566,7 +566,8 @@
     background: #0f121c;
     border: 6px solid #ffffff;
     border-radius: 80px;
-    transform: scale(0.98) translate3d(0, -10px, 0);
+    transform-origin: bottom center;
+    transform: scale(0.98) translate3d(0, -10px, 0) rotate(-3deg);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
     opacity: 0.9; /* Always visible to form the deck stack immediately */
     z-index: 3;
@@ -582,7 +583,8 @@
     background: #0f121c;
     border: 6px solid #ffffff;
     border-radius: 80px;
-    transform: scale(0.96) translate3d(0, -20px, 0);
+    transform-origin: bottom center;
+    transform: scale(0.96) translate3d(0, -20px, 0) rotate(3deg);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
     opacity: 0.75; /* Always visible to form the deck stack immediately */
     z-index: 2;
@@ -738,13 +740,15 @@
     .modal-card-wrapper::before {
         border-width: 4px;
         border-radius: 45px;
-        transform: scale(0.98) translate3d(0, -8px, 0);
+        transform-origin: bottom center;
+        transform: scale(0.98) translate3d(0, -8px, 0) rotate(-3deg);
     }
     
     .modal-card-wrapper::after {
         border-width: 4px;
         border-radius: 45px;
-        transform: scale(0.96) translate3d(0, -16px, 0);
+        transform-origin: bottom center;
+        transform: scale(0.96) translate3d(0, -16px, 0) rotate(3deg);
     }
     
     .modal-content {

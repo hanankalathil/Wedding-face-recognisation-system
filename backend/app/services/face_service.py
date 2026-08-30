@@ -27,24 +27,26 @@ _cached_matrix = None
 def get_embedding_cache():
     """
     Retrieves or builds the numpy matrix of all registered face embeddings.
-    Auto-updates when people are added or removed.
+    Auto-updates when people are added or removed or when consent status changes.
     """
     global _cached_person_ids, _cached_matrix
     load_db()
     db = get_db()
     persons = db.get("persons", {})
-    current_ids = list(persons.keys())
     
-    if set(current_ids) != set(_cached_person_ids):
-        if not current_ids:
+    # Filter to only consented persons
+    consented_ids = [pid for pid, pdata in persons.items() if pdata.get("consent", True) is not False]
+    
+    if set(consented_ids) != set(_cached_person_ids):
+        if not consented_ids:
             _cached_person_ids = []
             _cached_matrix = None
         else:
             embeddings = []
-            for pid in current_ids:
+            for pid in consented_ids:
                 emb = persons[pid]["representative_embedding"]
                 embeddings.append(emb)
-            _cached_person_ids = current_ids
+            _cached_person_ids = consented_ids
             # Convert list of vectors to (N, 512) numpy matrix
             _cached_matrix = np.array(embeddings, dtype=np.float32)
             

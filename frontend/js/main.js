@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                     
                     card.addEventListener('click', () => {
-                        window.location.href = `gallery.html?album=${encodeURIComponent(cat)}`;
+                        window.location.href = `/gallery?album=${encodeURIComponent(cat)}`;
                     });
                     
                     homepageAlbumsGrid.appendChild(card);

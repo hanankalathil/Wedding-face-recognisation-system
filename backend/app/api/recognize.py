@@ -12,6 +12,7 @@ router = APIRouter()
 class SetNameRequest(BaseModel):
     person_id: str
     display_name: str
+    consent: bool = True
 
 @router.post("/set-name")
 async def set_guest_name(req: SetNameRequest):
@@ -28,12 +29,14 @@ async def set_guest_name(req: SetNameRequest):
             raise HTTPException(status_code=404, detail="Person not found")
         
         db["persons"][req.person_id]["display_name"] = name
+        db["persons"][req.person_id]["consent"] = req.consent
         save_db()
         
         return {
             "status": "success",
             "message": f"Welcome, {name}!",
-            "display_name": name
+            "display_name": name,
+            "consent": req.consent
         }
     except HTTPException as he:
         raise he
