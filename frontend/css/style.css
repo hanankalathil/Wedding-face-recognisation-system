@@ -1,12 +1,12 @@
 /* Global Variables & Reset */
 :root {
     --color-white: #FFFFFF;
-    --color-bg-light: #F8FAFB; /* Cool crisp white background */
+    --color-bg-light: #FAF8F5; /* Warm luxury ivory background */
     --color-primary: #1A365D; /* Royal Navy */
     --color-secondary: #0D1F3D; /* Deep Navy */
     --color-accent: #C5A880; /* Elegant Champagne Gold */
     --color-soft-gray: #F5F5F5;
-    --color-text: #1F2937; /* Dark charcoal text */
+    --color-text: #2C2C2C; /* Dark charcoal text */
     --color-text-light: #6B7280;
     --color-dark: #111827; /* Near black */
     --glass-bg: rgba(255, 255, 255, 0.75);
@@ -561,14 +561,14 @@ img {
 /* Responsive Footer rules */
 @media screen and (max-width: 768px) {
     .footer {
-        padding: 60px 0 30px;
+        padding: 40px 0 20px;
     }
     
     .footer-grid {
         grid-template-columns: 1fr;
-        gap: 40px;
+        gap: 25px;
         text-align: left;
-        margin-bottom: 40px;
+        margin-bottom: 25px;
     }
     
     .footer-col {
@@ -697,8 +697,13 @@ img {
 
 .album-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(26, 54, 93, 0.15);
-    border-color: rgba(26, 54, 93, 0.2);
+    box-shadow: 0 20px 40px rgba(197, 168, 128, 0.15);
+    border-color: rgba(197, 168, 128, 0.3);
+}
+
+.album-card:active {
+    transform: scale(0.97) translateY(-2px);
+    box-shadow: 0 8px 20px rgba(197, 168, 128, 0.1);
 }
 
 .album-cover {

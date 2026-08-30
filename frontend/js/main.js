@@ -219,4 +219,208 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fetchAndApplyCoupleSettings(false);
     }, 5000);
+
+    // ==============================================
+    // Lightbox / Image Modal Navigation & Swipes
+    // ==============================================
+    window.currentModalImages = [];
+    window.currentModalIndex = 0;
+
+    const prevBtn = document.getElementById('modalPrevBtn');
+    const nextBtn = document.getElementById('modalNextBtn');
+    const counterEl = document.getElementById('modalCounter');
+    const modalImg = document.getElementById('modalImg');
+    const imageModal = document.getElementById('imageModal');
+
+    let isTransitioning = false;
+
+    if (modalImg) {
+        modalImg.addEventListener('load', () => {
+            modalImg.classList.add('loaded');
+            const wrapper = modalImg.closest('.modal-card-wrapper');
+            if (wrapper) wrapper.classList.add('loaded');
+        });
+    }
+
+    function updateModalContent(resetClass = true) {
+        if (!window.currentModalImages || window.currentModalImages.length === 0) return;
+        
+        const index = window.currentModalIndex;
+        const total = window.currentModalImages.length;
+        const src = window.currentModalImages[index];
+        
+        if (modalImg) {
+            // Remove loaded classes before changing source to hide blank card
+            modalImg.classList.remove('loaded');
+            const wrapper = modalImg.closest('.modal-card-wrapper');
+            if (wrapper) wrapper.classList.remove('loaded');
+            
+            modalImg.src = src;
+            if (resetClass) {
+                modalImg.classList.add('reveal-in');
+            }
+        }
+        if (counterEl) counterEl.textContent = `${index + 1} / ${total}`;
+        
+        // Show/hide navigation arrows based on count
+        if (prevBtn && nextBtn) {
+            prevBtn.style.display = total > 1 ? 'flex' : 'none';
+            nextBtn.style.display = total > 1 ? 'flex' : 'none';
+        }
+    }
+
+    function navigateModal(direction) {
+        if (isTransitioning || !window.currentModalImages || window.currentModalImages.length <= 1) return;
+        isTransitioning = true;
+        
+        // Target next index
+        const nextIndex = (window.currentModalIndex + direction + window.currentModalImages.length) % window.currentModalImages.length;
+        
+        // Apply swipe animation class
+        if (modalImg) {
+            modalImg.classList.add(direction > 0 ? 'swipe-left' : 'swipe-right');
+        }
+        
+        // Wait for swipe-away animation to complete
+        setTimeout(() => {
+            window.currentModalIndex = nextIndex;
+            if (modalImg) {
+                modalImg.classList.remove('swipe-left', 'swipe-right', 'reveal-in');
+            }
+            updateModalContent(true);
+            isTransitioning = false;
+        }, 300); // 300ms matches the swipe animation duration
+    }
+
+    // Intercept clicks on view buttons to build image queue
+    document.body.addEventListener('click', (e) => {
+        const viewBtn = e.target.closest('.view-btn');
+        if (!viewBtn) return;
+        
+        // Find parent container to query sibling view buttons
+        const container = viewBtn.closest('#resultsGrid') || viewBtn.closest('#galleryGrid') || viewBtn.closest('#galleryGridAlbum');
+        if (!container) return;
+        
+        const allBtns = Array.from(container.querySelectorAll('.view-btn'));
+        const images = allBtns.map(btn => btn.dataset.img || btn.getAttribute('data-img')).filter(Boolean);
+        const clickedSrc = viewBtn.dataset.img || viewBtn.getAttribute('data-img');
+        
+        window.currentModalImages = images;
+        window.currentModalIndex = images.indexOf(clickedSrc);
+        
+        updateModalContent(true);
+    });
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateModal(-1);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateModal(1);
+        });
+    }
+
+    // Keyboard controls (Esc, ArrowLeft, ArrowRight)
+    document.addEventListener('keydown', (e) => {
+        if (imageModal && imageModal.style.display === 'flex') {
+            if (e.key === 'ArrowLeft' && prevBtn) {
+                navigateModal(-1);
+            } else if (e.key === 'ArrowRight' && nextBtn) {
+                navigateModal(1);
+            } else if (e.key === 'Escape') {
+                const closeModalBtn = imageModal.querySelector('.close-modal');
+                if (closeModalBtn) closeModalBtn.click();
+            }
+        }
+    });
+
+    // Touch Swipe gestures
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    if (imageModal) {
+        imageModal.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        imageModal.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeThreshold = 50;
+            if (touchEndX < touchStartX - swipeThreshold) {
+                navigateModal(1); // Swipe left -> Next
+            } else if (touchEndX > touchStartX + swipeThreshold) {
+                navigateModal(-1); // Swipe right -> Prev
+            }
+        }, { passive: true });
+    }
+
+    // Full View Button Toggle Functionality
+    const fullViewBtn = document.getElementById('modalFullViewBtn');
+    if (fullViewBtn && imageModal) {
+        fullViewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Toggle local css class
+            imageModal.classList.toggle('fullscreen-mode');
+            
+            const icon = fullViewBtn.querySelector('i');
+            const isFullMode = imageModal.classList.contains('fullscreen-mode');
+            
+            if (icon) {
+                icon.className = isFullMode ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+            }
+            
+            // Toggle browser fullscreen API if supported
+            if (isFullMode) {
+                if (imageModal.requestFullscreen) {
+                    imageModal.requestFullscreen().catch(() => {});
+                } else if (imageModal.webkitRequestFullscreen) {
+                    imageModal.webkitRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        });
+
+        // Listen for browser fullscreen exit (e.g. Esc press or back swipe) to keep UI in sync
+        const onFullscreenChange = () => {
+            const isFullscreen = document.fullscreenElement !== null;
+            const icon = fullViewBtn.querySelector('i');
+            if (isFullscreen) {
+                imageModal.classList.add('fullscreen-mode');
+                if (icon) icon.className = 'fa-solid fa-compress';
+            } else {
+                imageModal.classList.remove('fullscreen-mode');
+                if (icon) icon.className = 'fa-solid fa-expand';
+            }
+        };
+
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+    }
+
+    // Auto-scroll to primary action section on load
+    window.addEventListener('load', () => {
+        const heroCard = document.querySelector('.hero-card');
+        const uploadCard = document.querySelector('.upload-card');
+        const gallerySection = document.querySelector('.gallery-section');
+        
+        setTimeout(() => {
+            if (heroCard) {
+                heroCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (uploadCard) {
+                uploadCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (gallerySection) {
+                gallerySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 600); // Wait 600ms for preloader fade-out to finish
+    });
 });

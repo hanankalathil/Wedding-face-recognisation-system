@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${imgUrl}" alt="Wedding Photo" class="result-img" loading="lazy" style="opacity: 0;">
                 <div class="result-overlay" style="display: none;">
                     <div style="display: flex; gap: 15px;">
-                        <button class="action-btn view-btn" title="View Fullscreen"><i class="fa-solid fa-expand"></i></button>
+                        <button class="action-btn view-btn" data-img="${imgUrl}" title="View Fullscreen"><i class="fa-solid fa-expand"></i></button>
                         <button class="action-btn download-btn" title="Download"><i class="fa-solid fa-download"></i></button>
                     </div>
                 </div>

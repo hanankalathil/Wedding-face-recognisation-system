@@ -16,8 +16,235 @@
     <link rel="stylesheet" href="css/responsive.css?v=2.0">
     <link rel="stylesheet" href="css/gallery.css?v=2.0">
     <link rel="stylesheet" href="css/photos.css?v=2.0">
+    <style>
+        /* ==============================================
+           Elegant Luxury Preloader/Loading Screen
+           ============================================== */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0d121c; /* Luxury deep navy/black */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), visibility 0.6s;
+            pointer-events: auto;
+        }
+
+        #preloader.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .preloader-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        /* Elegant Glowing Scanner Rings */
+        .preloader-animation {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preloader-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: #C5A880; /* Elegant gold accent */
+            animation: preloader-spin 1.8s linear infinite;
+        }
+
+        .preloader-ring:nth-child(2) {
+            width: 85%;
+            height: 85%;
+            border-top-color: transparent;
+            border-bottom-color: rgba(197, 168, 128, 0.5);
+            animation: preloader-spin-reverse 1.4s linear infinite;
+        }
+
+        .preloader-ring:nth-child(3) {
+            width: 70%;
+            height: 70%;
+            border-top-color: transparent;
+            border-left-color: rgba(197, 168, 128, 0.8);
+            animation: preloader-spin 1s linear infinite;
+        }
+
+        /* Central glowing camera iris/sparkle */
+        .preloader-center {
+            width: 44px;
+            height: 44px;
+            background: radial-gradient(circle, #C5A880 0%, #A3845B 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 25px #C5A880, 0 0 50px rgba(197, 168, 128, 0.5);
+            animation: preloader-pulse 1.5s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0d121c;
+        }
+
+        .preloader-center svg {
+            width: 20px;
+            height: 20px;
+            fill: #0d121c;
+        }
+
+        .preloader-text-container {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: preloader-fadeInUpText 0.8s ease forwards;
+            animation-delay: 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preloader-title {
+            font-family: 'Playfair Display', serif;
+            color: #fff;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .preloader-subtitle {
+            font-family: 'Lato', sans-serif;
+            color: #C5A880; /* Gold */
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            opacity: 0.8;
+        }
+
+        .preloader-progress-bar {
+            width: 160px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .preloader-progress-line {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #C5A880, #A3845B);
+            box-shadow: 0 0 10px #C5A880;
+            animation: preloader-fillProgress 2.2s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+        }
+
+        /* Animations */
+        @keyframes preloader-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes preloader-spin-reverse {
+            to { transform: rotate(-360deg); }
+        }
+
+        @keyframes preloader-pulse {
+            0%, 100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 20px rgba(197, 168, 128, 0.6);
+            }
+            50% {
+                transform: scale(1.08);
+                box-shadow: 0 0 35px rgba(197, 168, 128, 0.9), 0 0 60px rgba(197, 168, 128, 0.4);
+            }
+        }
+
+        @keyframes preloader-fadeInUpText {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes preloader-fillProgress {
+            0% { width: 0%; }
+            50% { width: 65%; }
+            100% { width: 100%; }
+        }
+    </style>
 </head>
 <body>
+
+    <!-- Elegant Preloader Loading Screen -->
+    <div id="preloader">
+        <div class="preloader-container">
+            <div class="preloader-animation">
+                <div class="preloader-ring"></div>
+                <div class="preloader-ring"></div>
+                <div class="preloader-ring"></div>
+                <div class="preloader-center">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+            </div>
+            <div class="preloader-text-container">
+                <div class="preloader-title" id="preloaderTitle">Techora Memories</div>
+                <div class="preloader-subtitle">Preserving Beautiful Moments</div>
+                <div class="preloader-progress-bar">
+                    <div class="preloader-progress-line"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Preloader fade-out logic
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            if (preloader) {
+                // Ensure loading bar finishes filling, then fade out
+                setTimeout(() => {
+                    preloader.classList.add('fade-out');
+                    // Completely remove from DOM after transition completes to save resources
+                    setTimeout(() => preloader.remove(), 600);
+                }, 1000);
+            }
+        });
+        
+        // Dynamically load couple names to display on preloader if available
+        (async function() {
+            try {
+                const res = await fetch('/api/admin/couple-settings');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.settings && data.settings.couple_name) {
+                        const titleEl = document.getElementById('preloaderTitle');
+                        if (titleEl) {
+                            titleEl.textContent = data.settings.couple_name;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load couple settings for preloader:', e);
+            }
+        })();
+    </script>
 
     <!-- Navigation Bar -->
     <nav class="navbar scrolled">
@@ -101,11 +328,43 @@
         </div>
     </section>
 
-    <!-- Fullscreen Modal -->
+    <!-- Fullscreen Modal / Lightbox -->
     <div class="modal" id="imageModal">
-        <span class="close-modal">&times;</span>
-        <span class="download-modal-btn" id="modalDownloadBtn" title="Download Image"><i class="fa-solid fa-download"></i></span>
-        <img class="modal-content" id="modalImg">
+        <!-- Top Bar -->
+        <div class="modal-top-bar">
+            <!-- Back Button -->
+            <span class="modal-control-btn close-modal" title="Back to Gallery" aria-label="Back to Gallery">
+                <i class="fa-solid fa-chevron-left"></i>
+            </span>
+            
+            <!-- Dynamic Counter -->
+            <div class="modal-counter" id="modalCounter">1 / 1</div>
+            
+            <!-- Controls Group -->
+            <div class="modal-top-controls">
+                <span class="modal-control-btn" id="modalFullViewBtn" title="Toggle Full View" aria-label="Toggle Full View">
+                    <i class="fa-solid fa-expand"></i>
+                </span>
+                <span class="modal-control-btn" id="modalDownloadBtn" title="Download Photo" aria-label="Download Photo">
+                    <i class="fa-solid fa-download"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- Main Photo Frame -->
+        <div class="modal-frame">
+            <span class="modal-nav-btn prev-btn" id="modalPrevBtn" title="Previous Image">
+                <i class="fa-solid fa-chevron-left"></i>
+            </span>
+            
+            <div class="modal-card-wrapper">
+                <img class="modal-content" id="modalImg" alt="Wedding Memory">
+            </div>
+            
+            <span class="modal-nav-btn next-btn" id="modalNextBtn" title="Next Image">
+                <i class="fa-solid fa-chevron-right"></i>
+            </span>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -160,7 +419,7 @@
     </footer>
 
     <!-- Scripts -->
-    <script type="module" src="js/main.js?v=3.0"></script>
+    <script type="module" src="js/main.js?v=3.1"></script>
     <script type="module" src="js/gallery.js?v=2.4"></script>
 </body>
 </html>
